@@ -374,7 +374,7 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
 <script>
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-var UI = {view:'summary', open:{}, keyOnly:false, side:'transcript', apiKey:'', keyMode:false};
+var UI = {view:'summary', open:{}, keyOnly:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false};
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs||{})){
@@ -641,7 +641,8 @@ const ERR = {
   prompt_too_large:'The session is too long to send. Shorten the context and retry.',
   cancelled:'Stopped.',
   unavailable:'Live generation is not connected. See the setup panel.',
-  bad_key:'Anthropic rejected that API key. Check it and connect again.'
+  bad_key:'Anthropic rejected that API key. Check it and connect again.',
+  bad_pass:'The passcode was rejected. Unlock live sessions again.'
 };
 const errCopy = e => ERR[e?.code] || 'Claude could not finish this step. Retry when ready.';
 
@@ -905,7 +906,7 @@ async function liveRun(from){
     if (e?.code==='stale' || S!==my) return;
     S.live.busy=null;
     S.live.error = {phase:S.live.phase==='gate'?'r3':S.live.phase, msg:errCopy(e)};
-    if (['not_granted','sampling_disabled','bad_key'].includes(e?.code)){ SAMPLE=null; UI.keyMode=false; }
+    if (['not_granted','sampling_disabled','bad_key','bad_pass'].includes(e?.code)){ SAMPLE=null; UI.keyMode=false; UI.pass=''; }
     renderAll();
   }
 }
@@ -1189,8 +1190,12 @@ function liveStatusBlock(){
   if (SAMPLE===undefined) return h('p',{class:'small muted'},'Checking for a live connection…');
   if (SAMPLE){
     if (UI.keyMode) return h('p',{class:'small muted'},'Connected with your API key. It stays in this browser and goes only to Anthropic. ',h('button',{class:'linkbtn',onclick:disconnectKey},'Disconnect'));
-    return h('p',{class:'small muted'}, HOSTED ? 'Connected through your organization’s server. A full session is about 25 to 30 requests.' : 'Live is ready. It runs on your Claude account, and Claude asks once for permission. A full session is about 25 to 30 requests.');
+    return h('p',{class:'small muted'}, HOSTED ? `Live is ready. It runs on this site’s shared key${UI.economy?' in economy mode':''}, so please keep sessions to what you need.` : 'Live is ready. It runs on your Claude account, and Claude asks once for permission. A full session is about 25 to 30 requests.');
   }
+  if (HOSTED && UI.server && UI.needPass) return h('div',{class:'keybox'},
+    h('div',{class:'label'},'Unlock live sessions'),
+    h('p',{class:'small muted'},'Live sessions on this site need a passcode from whoever shared it. The example session works without one.'),
+    h('div',{style:'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px'},h('input',{type:'password',id:'passIn','aria-label':'Passcode',placeholder:'Passcode',autocomplete:'off',onkeydown:e=>{ if (e.key==='Enter') unlockPass(); }}),h('button',{class:'btn primary',onclick:unlockPass},'Unlock')));
   if (!HOSTED) return h('div',{class:'note warn'},h('b',{},'Live generation isn’t available in this view. '),'Claude didn’t give this page access. Open the artifact from claude.ai in a web browser while signed in, not a downloaded or GitHub copy. If your organization limits what artifacts can do, ask your admin. The example session still works.');
   return h('div',{class:'keybox'},
     h('div',{class:'label'},'Connect live generation'),
@@ -1696,10 +1701,10 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const CAN_MIC = HOSTED && !!SR && window.isSecureContext;
 async function apiJson(input, opts={}){
   let res;
-  try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default'})}); }
+  try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json','x-tabletop-passcode':UI.pass},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default'})}); }
   catch{ throw {code:'upstream_error'}; }
   if (res.status===429) throw {code:'rate_limited'};
-  if (res.status===401||res.status===403) throw {code:'not_granted'};
+  if (res.status===401||res.status===403) throw {code:'bad_pass'};
   if (!res.ok) throw {code:'upstream_error'};
   return parseLoose(String((await res.json()).text||''));
 }
@@ -1729,6 +1734,15 @@ function connectKey(){
   if ($('#rememberKey')?.checked){ try{ sessionStorage.setItem('pt_key', k); }catch{} }
   renderAll(); toast('Connected');
 }
+async function unlockPass(){
+  const v = ($('#passIn')?.value||'').trim(); if (!v){ toast('Enter the passcode.'); return; }
+  try{
+    const r = await fetch(window.TABLETOP_API,{headers:{'x-tabletop-passcode':v}});
+    const j = await r.json();
+    if (!j.valid){ toast('That passcode didn’t work.'); return; }
+    UI.pass = v; SAMPLE = {json: apiJson}; renderAll(); toast('Live sessions unlocked');
+  }catch{ toast('Could not reach the server. Try again.'); }
+}
 function disconnectKey(){ UI.apiKey=''; UI.keyMode=false; SAMPLE=null; try{ sessionStorage.removeItem('pt_key'); }catch{} renderAll(); }
 function renderSticky(){ $('#stickyQ').textContent = S.question || ''; $('#stickyStage').textContent = STAGES.find(x=>x[0]===S.stage)[1]; }
 function blobSave({filename,data}){
@@ -1750,8 +1764,14 @@ function toggleMic(btn){
   if (HOSTED){
     DL = {save: blobSave};
     SAMPLE = null;
-    if (window.TABLETOP_API){ try{ const r = await fetch(window.TABLETOP_API); if (r.ok) SAMPLE = {json: apiJson}; }catch{} }
-    if (!SAMPLE){ let k=''; try{ k = sessionStorage.getItem('pt_key')||''; }catch{} if (k){ UI.apiKey=k; UI.keyMode=true; SAMPLE={json:directJson}; } }
+    if (window.TABLETOP_API){
+      try{
+        const r = await fetch(window.TABLETOP_API);
+        const j = r.ok ? await r.json().catch(()=>({})) : {};
+        if (j.ok){ UI.server=true; UI.economy=!!j.economy; UI.needPass=!!j.passcode; if (!UI.needPass) SAMPLE = {json: apiJson}; }
+      }catch{}
+    }
+    if (!SAMPLE && !UI.server){ let k=''; try{ k = sessionStorage.getItem('pt_key')||''; }catch{} if (k){ UI.apiKey=k; UI.keyMode=true; SAMPLE={json:directJson}; } }
     renderAll(); return;
   }
   const [a,b] = await Promise.all([window.claude.use('sample').catch(()=>null), window.claude.use('downloads').catch(()=>null)]);
