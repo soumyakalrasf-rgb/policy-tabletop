@@ -1,0 +1,1490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<style>:root{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<script>window.TABLETOP_API = "/api/claude";</script>
+</head>
+<body>
+<title>Policy Tabletop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#F4F5F6; --ink:#121417; --ink-2:#565C64; --ink-3:#8C9199;
+  --line:#E7E9EC; --line-2:#CDD1D6; --accent:#121417; --accent-ink:#FFFFFF; --accent-soft:#F4F5F6;
+  --signal:#C4402A;
+  --g-internal:#121417; --g-external:#8C9199; --g-absent:#8C9199; --g-red:#C4402A; --g-mod:#C4C8CD; --g-staff:#121417;
+  --felt:#F4F5F6; --felt-edge:#E7E9EC; --warn:#8C9199; --warn-soft:#F4F5F6; --good:#121417;
+  --radius:6px; --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0F1012; --surface:#0F1012; --surface-2:#1A1C1F; --ink:#ECEDEF; --ink-2:#A3A8AF; --ink-3:#6F747B;
+    --line:#24272B; --line-2:#3A3E44; --accent:#ECEDEF; --accent-ink:#0F1012; --accent-soft:#1A1C1F; --signal:#EE7560;
+    --g-internal:#ECEDEF; --g-external:#6F747B; --g-absent:#6F747B; --g-red:#EE7560; --g-mod:#3A3E44; --g-staff:#ECEDEF;
+    --felt:#16181B; --felt-edge:#24272B; --warn:#6F747B; --warn-soft:#1A1C1F; --good:#ECEDEF;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F1012; --surface:#0F1012; --surface-2:#1A1C1F; --ink:#ECEDEF; --ink-2:#A3A8AF; --ink-3:#6F747B;
+  --line:#24272B; --line-2:#3A3E44; --accent:#ECEDEF; --accent-ink:#0F1012; --accent-soft:#1A1C1F; --signal:#EE7560;
+  --g-internal:#ECEDEF; --g-external:#6F747B; --g-absent:#6F747B; --g-red:#EE7560; --g-mod:#3A3E44; --g-staff:#ECEDEF;
+  --felt:#16181B; --felt-edge:#24272B; --warn:#6F747B; --warn-soft:#1A1C1F; --good:#ECEDEF;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;padding-inline:20px;padding-block:0 64px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin-inline:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+h1,h2,h3{text-wrap:balance;margin:0;font-weight:600}
+h2{font-size:1.05rem;letter-spacing:-.005em}
+h3{font-size:.92rem}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--ink-2)}
+.small{font-size:.84rem}
+
+/* top line */
+.banner{max-width:1120px;margin-inline:auto;padding-block:14px 0;font-size:.78rem;color:var(--ink-3);display:flex;gap:6px;flex-wrap:wrap}
+.banner b{color:var(--signal);font-weight:600}
+header.top{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;padding-top:18px}
+.brandrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand strong{font-size:.95rem;font-weight:700;letter-spacing:-.01em}
+.brand .label{letter-spacing:.06em}
+.seg{display:inline-flex;gap:2px}
+.seg button{border:0;background:transparent;padding:4px 10px;border-radius:999px;font-size:.82rem;font-weight:500;color:var(--ink-3)}
+.seg button[aria-pressed="true"]{background:var(--surface-2);color:var(--ink)}
+.question h1{font-size:clamp(1.35rem,2.8vw,2rem);font-weight:600;letter-spacing:-.02em;line-height:1.2;max-width:34ch;margin-top:6px}
+.meta{display:flex;gap:0;flex-wrap:wrap;margin-top:10px;font-size:.84rem;color:var(--ink-3)}
+.chip{display:inline-flex;align-items:center;gap:5px;color:var(--ink-3)}
+.chip + .chip::before{content:"·";margin:0 9px;color:var(--line-2)}
+.chip b{color:var(--ink-2);font-weight:500}
+.stepper{display:flex;gap:22px;list-style:none;margin:0;padding:0;overflow-x:auto;font-size:.82rem}
+.stepper li{display:flex;gap:6px;align-items:center;white-space:nowrap;color:var(--ink-3);padding-bottom:6px;border-bottom:2px solid transparent}
+.stepper li .n{font-family:var(--mono);font-size:.72rem}
+.stepper li.done{color:var(--ink-2)}
+.stepper li.now{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
+
+/* sections */
+.panel{background:transparent;border:0;border-top:1px solid var(--line);padding:24px 0 0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.empty{color:var(--ink-3);font-size:.88rem;padding:6px 0}
+
+/* buttons */
+.btn{border:1px solid var(--line-2);background:transparent;border-radius:var(--radius);padding:6px 12px;font-size:.84rem;font-weight:500;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.primary:hover{opacity:.88}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* forms */
+.setup-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px}
+@media (max-width:900px){.setup-grid{grid-template-columns:minmax(0,1fr)}}
+fieldset{border:0;margin:0;padding:0;display:grid;gap:10px}
+legend{padding:0;margin-bottom:6px}
+.field{display:grid;gap:5px}
+.field label{font-size:.8rem;font-weight:500;color:var(--ink-2)}
+input[type=text],input[type=date],select,textarea{width:100%;border:1px solid var(--line-2);background:var(--bg);border-radius:var(--radius);padding:8px 10px;font-size:.9rem}
+input:focus,select:focus,textarea:focus{border-color:var(--ink);outline:none}
+textarea{resize:vertical;min-height:60px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.list-ed{display:grid;gap:0}
+.item-ed{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
+.item-ed .tag{font-family:var(--mono);font-size:.75rem;color:var(--ink-3);padding-top:9px;min-width:24px}
+.item-ed .stack{display:grid;gap:6px}
+.x{border:0;background:transparent;color:var(--ink-3);font-size:1.1rem;line-height:1;padding:6px}
+.x:hover{color:var(--signal)}
+.seat-ed.off{opacity:.45}
+.seat-ed .grp{width:auto}
+.confirm{display:flex;gap:8px;align-items:center;font-size:.88rem;font-weight:500}
+.note{font-size:.82rem;color:var(--ink-2);border-left:2px solid var(--line-2);padding:2px 0 2px 12px}
+.note.warn{border-left-color:var(--signal);color:var(--ink)}
+
+/* stage */
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start;border-top:1px solid var(--line);padding-top:24px}
+@media (max-width:960px){.stage{grid-template-columns:minmax(0,1fr)}}
+.tablebox{display:grid;gap:14px}
+.table{position:relative;width:100%;max-width:500px;aspect-ratio:1;margin-inline:auto}
+.felt{position:absolute;inset:23%;border-radius:50%;background:var(--felt);border:1px solid var(--felt-edge);display:grid;place-items:center;text-align:center;padding:10%}
+.felt .c-stage{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.felt .c-who{font-weight:600;font-size:clamp(.85rem,2.2vw,1rem);line-height:1.25;margin-top:4px}
+.felt .c-type{font-size:.76rem;color:var(--ink-3);margin-top:2px}
+.seat{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:4px;border:0;background:transparent;padding:0;width:92px}
+.disc{width:clamp(40px,10.5vw,54px);aspect-ratio:1;border-radius:50%;background:var(--bg);border:1.5px solid var(--gc);display:grid;place-items:center;font-family:var(--mono);font-size:.72rem;color:var(--ink);position:relative;transition:transform .25s, background .25s, color .25s}
+.seat[data-group="absent"] .disc{border-style:dashed}
+.seat[data-group="redteam"] .disc{color:var(--signal)}
+.seat.speaking .disc{transform:scale(1.12);background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seat[data-group="redteam"].speaking .disc{background:var(--signal);border-color:var(--signal);color:var(--bg)}
+.seat.selected .disc{outline:1px solid var(--ink);outline-offset:4px}
+.seat.off{opacity:.25}
+.seat .cap{font-size:.68rem;line-height:1.2;color:var(--ink-3);text-align:center;max-width:92px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.seat .check{position:absolute;right:-4px;top:-4px;width:16px;height:16px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:.6rem;display:grid;place-items:center;border:2px solid var(--bg)}
+@media (max-width:560px){.seat .cap{display:none}.seat{width:auto}}
+@media (prefers-reduced-motion:reduce){.disc{transition:none}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:.74rem;color:var(--ink-3)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.sw{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--gc);display:inline-block}
+.sw.dash{border-style:dashed}
+.seatcard{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
+.seatcard .hd{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.seatcard ul{margin:0;padding-left:18px;font-size:.86rem}
+.estrow{display:flex;gap:6px;flex-wrap:wrap}
+.est{font-family:var(--mono);font-size:.74rem;color:var(--ink-2);background:var(--surface-2);border-radius:4px;padding:1px 6px;font-variant-numeric:tabular-nums}
+.est .d-up{color:var(--signal)} .est .d-dn{color:var(--ink)}
+
+/* transcript */
+.side{display:grid;gap:24px}
+.transcript{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+.transcript .th{padding-bottom:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tlist{max-height:500px;overflow-y:auto;display:grid;align-content:start}
+@media (max-width:960px){.tlist{max-height:420px}}
+.turn{padding:12px 0;border-bottom:1px solid var(--line);display:grid;gap:4px}
+.turn .who{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.8rem;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gc);flex:none}
+.ttype{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:500}
+.ttype.challenge{color:var(--signal)}
+.ttype.concession,.ttype.steer{color:var(--ink)}
+.turn .txt{font-size:.9rem}
+.disputes{font-size:.8rem;color:var(--ink-2);border-left:2px solid var(--signal);padding-left:8px}
+.src{font-size:.72rem;color:var(--ink-3)}
+.src.none{color:var(--ink-3);font-style:italic}
+.tfoot{padding-top:10px;font-size:.8rem;color:var(--ink-3);min-height:34px}
+.controls{display:grid;gap:12px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;border-radius:999px;padding:4px 10px;font-size:.8rem;font-weight:500;color:var(--ink-3)}
+.tabs button[aria-selected="true"]{background:var(--surface-2);color:var(--ink)}
+.steerform{display:grid;gap:8px}
+.checks{display:flex;gap:12px;flex-wrap:wrap;font-size:.84rem}
+.checks label{display:inline-flex;gap:5px;align-items:center}
+
+/* detail */
+.outs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 40px}
+@media (max-width:960px){.outs{grid-template-columns:minmax(0,1fr)}}
+.span2{grid-column:1/-1}
+.tscroll{overflow-x:auto}
+table.grid{border-collapse:collapse;width:100%;font-size:.84rem;font-variant-numeric:tabular-nums}
+table.grid th,table.grid td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.grid th{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600;white-space:nowrap}
+table.grid .num{font-family:var(--mono)}
+.stance{display:inline-flex;align-items:center;gap:5px;font-size:.78rem;white-space:nowrap;color:var(--ink-2)}
+.stance i{font-style:normal;font-size:.9rem;line-height:1}
+.stance.support{color:var(--ink)} .stance.support i{color:var(--ink)}
+.stance.conditional i{color:var(--ink-2)}
+.stance.oppose{color:var(--ink-3)} .stance.oppose i{color:var(--signal)}
+.flag{display:inline-block;font-size:.7rem;color:var(--signal);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.matrix{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
+@media (max-width:720px){.matrix{grid-template-columns:minmax(0,1fr)}}
+.quad{padding:18px 0;border-top:1px solid var(--line);display:grid;gap:6px;align-content:start}
+.quad h3{display:flex;justify-content:space-between;gap:8px}
+.quad h3 .count{font-family:var(--mono);font-size:.74rem;color:var(--ink-3);font-weight:400}
+.quad .sub{font-size:.78rem;color:var(--ink-3);margin-bottom:4px}
+.quad ul,.plain{margin:0;padding-left:18px;font-size:.87rem;display:grid;gap:6px}
+.record pre{white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:.76rem;background:var(--surface-2);border-radius:var(--radius);padding:16px;max-height:440px;overflow:auto;margin:0;color:var(--ink-2)}
+.stamp{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--signal)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:var(--radius);font-size:.84rem;z-index:10}
+/* views */
+.viewtabs{display:flex;gap:22px;border-bottom:1px solid var(--line)}
+.viewtabs button{border:0;background:transparent;padding:0 0 10px;font-weight:500;font-size:.9rem;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.viewtabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.view{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+/* executive summary */
+.es{border-top:0;padding-top:4px}
+.es-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.es-headline{font-size:clamp(1.2rem,2.4vw,1.6rem);font-weight:600;line-height:1.3;letter-spacing:-.015em;max-width:40ch;margin-bottom:28px}
+.es-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 48px}
+@media (max-width:760px){.es-grid{grid-template-columns:minmax(0,1fr)}}
+.es-block{display:grid;gap:10px;align-content:start}
+.es-block ul,.es-block ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:.92rem}
+.es-block p{font-size:.92rem}
+.es-empty{color:var(--ink-2);margin:4px 0 14px;max-width:60ch}
+.obar{display:grid;gap:6px}
+.obar .top{display:flex;justify-content:space-between;gap:10px;font-size:.88rem}
+.obar .top b{font-weight:600}
+.obar .top .num{font-family:var(--mono);font-size:.74rem;color:var(--ink-3);white-space:nowrap}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--surface-2);gap:2px}
+.bar span{display:block;height:100%}
+.bar .s{background:var(--ink)} .bar .c{background:var(--ink-3)} .bar .o{background:var(--signal)}
+.keyline{display:flex;gap:14px;flex-wrap:wrap;font-size:.72rem;color:var(--ink-3)}
+.keyline i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.where{display:block;font-size:.78rem;color:var(--ink-3);margin-top:2px}
+.es-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--line)}
+/* matrix items */
+.mi{display:grid;gap:5px;padding:10px 0}
+.mi + .mi{border-top:1px dashed var(--line)}
+.mi .t{font-size:.9rem}
+.mi dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:.78rem}
+.mi dt{color:var(--ink-3);white-space:nowrap}
+.mi dd{margin:0;color:var(--ink-2)}
+.mi dd.next{color:var(--ink);font-weight:500}
+.mlist{display:grid}
+/* intake */
+.intake{display:grid;gap:14px;max-width:720px}
+.bigq{font-size:1.05rem!important;color:var(--ink)!important;font-weight:600!important}
+.qwrap{position:relative}
+#liveQ{font-size:1.05rem;min-height:92px;padding-right:52px}
+.micbtn{position:absolute;right:8px;bottom:10px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line-2);background:var(--bg);display:grid;place-items:center;color:var(--ink)}
+.micbtn svg{width:18px;height:18px}
+.micbtn[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:#fff}
+.starters{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pill{border:1px solid var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:.8rem;color:var(--ink-2)}
+.pill:hover{border-color:var(--ink);color:var(--ink)}
+.dictate{display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--ink-3)}
+.dictate svg{flex:none;width:16px;height:16px;color:var(--ink-3);margin-top:2px}
+.dictate b{color:var(--ink-2);font-weight:500}
+details.more{border-top:1px solid var(--line);padding-top:12px}
+details.more summary{cursor:pointer;font-weight:500;font-size:.86rem;color:var(--ink-2)}
+details.more[open] > summary{margin-bottom:14px}
+.inline3{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+@media (max-width:620px){.inline3{grid-template-columns:minmax(0,1fr)}}
+.ready{display:grid;gap:14px}
+.rule{border:0;border-top:1px solid var(--line);margin:22px 0}
+.th .tgl{border:0;background:transparent;padding:2px 8px;border-radius:999px;font-size:.76rem;font-weight:500;color:var(--ink-3)}
+.th .tgl[aria-pressed="true"]{background:var(--surface-2);color:var(--ink)}
+footer.guard{font-size:.78rem;color:var(--ink-3);display:grid;gap:6px;border-top:1px solid var(--line);padding-top:16px}
+footer.guard summary{cursor:pointer;font-weight:500;color:var(--ink-3)}
+footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
+</style>
+
+<div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brandrow">
+      <div class="brand"><strong>Policy Tabletop</strong><span class="label" id="modeLabel">Scripted demo</span></div>
+      <div class="seg" role="group" aria-label="Session mode">
+        <button id="modeDemo" aria-pressed="true">Scripted demo</button>
+        <button id="modeLive" aria-pressed="false">Live session</button>
+      </div>
+    </div>
+    <div class="question">
+      <div class="label">Decision question</div>
+      <h1 id="qText"></h1>
+      <div class="meta" id="qMeta"></div>
+    </div>
+    <ol class="stepper" id="stepper"></ol>
+  </header>
+
+  <nav class="viewtabs" role="tablist" aria-label="Views">
+    <button role="tab" id="tabSummary" aria-selected="true" aria-controls="viewSummary">Summary</button>
+    <button role="tab" id="tabDetail" aria-selected="false" aria-controls="viewDetail">Full detail</button>
+  </nav>
+
+  <div class="view" id="viewSummary" role="tabpanel" aria-labelledby="tabSummary">
+    <section class="panel es" id="summaryPanel"></section>
+    <section class="panel" id="setupPanel"></section>
+    <section class="stage" id="stage">
+      <div class="tablebox">
+        <div class="table" id="table"><div class="felt" id="felt"></div></div>
+        <div class="legend" id="legend"></div>
+        <div id="seatCard"></div>
+      </div>
+      <div class="side">
+        <div class="transcript">
+          <div class="th"><h2>Transcript</h2><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="false">Key moments only</button></span></div>
+          <div class="tlist" id="tlist" aria-live="polite"></div>
+          <div class="tfoot" id="tfoot"></div>
+        </div>
+        <div class="controls" id="controls"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="view" id="viewDetail" role="tabpanel" aria-labelledby="tabDetail" hidden>
+    <section class="outs" id="outs">
+      <div class="panel span2" id="matrixPanel"></div>
+      <div class="panel span2" id="landingPanel"></div>
+      <div class="panel" id="expertPanel"></div>
+      <div class="panel" id="consultPanel"></div>
+      <div class="panel span2 record" id="recordPanel"></div>
+    </section>
+  </div>
+
+  <footer class="guard">
+    <details><summary>Guardrails and how this tool should be used</summary>
+    <ul style="margin-top:8px">
+      <li>Seats are roles, never named individuals. They cite only their listed sources; anything else is flagged "No source: reasoning only."</li>
+      <li>Seats built on one model tend to agree. Low disagreement is flagged as a warning, not treated as confidence.</li>
+      <li>Get consent before recording any meeting audio, and check with legal counsel how records and open-meetings laws treat transcripts and outputs from this tool.</li>
+      <li>Live sessions send the question, context and transcript to Claude on the viewer's own account. Do not paste confidential material you are not permitted to share that way.</li>
+    </ul>
+    </details>
+  </footer>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+var UI = {view:'summary', open:{}, keyOnly:false};
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})){
+    if (v==null || v===false) continue;
+    if (k==='class') el.className = v;
+    else if (k==='style') el.style.cssText = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k==='value') el.value = v;
+    else if (k==='checked') el.checked = !!v;
+    else el.setAttribute(k, v===true ? '' : v);
+  }
+  for (const kid of kids.flat(Infinity)){
+    if (kid==null || kid===false) continue;
+    el.append(kid instanceof Node ? kid : String(kid));
+  }
+  return el;
+}
+const clamp = v => Math.max(0, Math.min(100, Math.round(Number(v)||0)));
+const median = a => { const b=[...a].sort((x,y)=>x-y); const n=b.length; if(!n) return null; return n%2 ? b[(n-1)/2] : Math.round((b[n/2-1]+b[n/2])/2); };
+const arr = x => Array.isArray(x) ? x.filter(v=>v!=null&&v!=='null').map(String) : [];
+const uniq = a => [...new Set(a.filter(Boolean).map(s=>String(s).trim()).filter(Boolean))];
+function toast(msg){ const t=h('div',{class:'toast',role:'status'},msg); document.body.append(t); setTimeout(()=>t.remove(),2400); }
+function addMonths(months){ const d=new Date(); d.setMonth(d.getMonth()+Number(months||12)); return d.toISOString().slice(0,10); }
+function abbr(role){ const w=String(role||'?').replace(/[^A-Za-z0-9 ]/g,' ').split(/\s+/).filter(x=>x && !/^(of|and|the|with|or|for|&)$/i.test(x)); return (w.length>1 ? w.slice(0,3).map(x=>x[0]).join('') : (w[0]||'?').slice(0,3)).toUpperCase(); }
+
+const LOW = 15; // spread (pts) at or below which disagreement is suspiciously low
+const GROUPS = {
+  internal:{label:'Internal', color:'var(--g-internal)'},
+  external:{label:'External', color:'var(--g-external)'},
+  absent:{label:'Absent voice', color:'var(--g-absent)'},
+  redteam:{label:'Red Team', color:'var(--g-red)'}
+};
+const STAGES = [['setup','Setup'],['r1','Round 1'],['r2','Round 2'],['r3','Round 3'],['outputs','Outputs']];
+const TYPE_LABEL = {position:'Position',challenge:'Challenge',concession:'Concession','re-estimate':'Re-estimate',steer:'Human steer',moderator:'Moderator',premortem:'Pre-mortem',answer:'Answer'};
+
+/* ---------- demo content (example scenario) ---------- */
+const DEMO = {
+  rawQuestion: "Should we let departments use generative AI chatbots to answer residents' questions? Need to figure out what review is needed.",
+  question: "What review, if any, should the City require before a department deploys a generative AI tool that answers residents' questions directly?",
+  decisionType: 'deliberative', horizon: 12,
+  options: [
+    {id:'o1', label:'Do nothing more', desc:'Rely on the existing IT procurement and security review.'},
+    {id:'o2', label:'Public registry', desc:'Publish an inventory of resident-facing AI tools with a plain-language notice for each.'},
+    {id:'o3', label:'Tiered impact assessment', desc:"Score each tool's impact; higher tiers need testing, human review and a record before launch."},
+    {id:'o4', label:'Pause', desc:'No new resident-facing generative AI until a full framework is adopted.'}
+  ],
+  risks: [
+    {id:'R1', short:'Wrong guidance', text:'A resident-facing AI tool gives materially wrong guidance on eligibility, fees or deadlines that residents act on.'},
+    {id:'R2', short:'Undocumented AI use', text:'A records request, audit or lawsuit reveals AI use in a resident-facing service that was not documented.'},
+    {id:'R3', short:'Launch delayed', text:'The review process delays a planned service launch by more than 3 months.'},
+    {id:'R4', short:'Shadow AI', text:'Staff use unapproved AI tools for resident communications outside any review.'},
+    {id:'R5', short:'Data exposure', text:"Resident personal data entered into an AI tool is exposed or used outside the City's control."}
+  ],
+  seats: [
+    {id:'s1', role:'Digital Services (IT)', group:'internal', perspective:"Wants a review that fits existing procurement and doesn't stall launches already in the pipeline.", sources:['NIST AI RMF 1.0 (NIST AI 100-1)','City IT procurement policy (example internal record)']},
+    {id:'s2', role:'Information Security', group:'internal', perspective:'Treats resident data entered into AI tools as the primary exposure.', sources:['NIST AI 600-1 Generative AI Profile','City information security policy (example internal record)']},
+    {id:'s3', role:"City Attorney's Office", group:'internal', perspective:'Focused on liability for wrong guidance and on records obligations.', sources:['Canada Directive on Automated Decision-Making','City Attorney memo on AI and public records (example internal record)']},
+    {id:'s4', role:'Resident Services Dept.', group:'internal', perspective:'Needs faster answers for residents and is short on call-center staff.', sources:['Resident services call-center scripts (example internal record)','NIST AI RMF 1.0 (NIST AI 100-1)']},
+    {id:'s5', role:'Records & Public Disclosure', group:'internal', perspective:'Wants every AI-assisted exchange to leave a retrievable record.', sources:['Records retention schedule (example internal record)','UK Algorithmic Transparency Recording Standard']},
+    {id:'s6', role:'Technology Vendors', group:'external', perspective:'Prefers clear, predictable requirements over case-by-case review.', sources:['ISO/IEC 42001:2023','NIST AI RMF 1.0 (NIST AI 100-1)']},
+    {id:'s7', role:'Civil Liberties Advocates', group:'external', perspective:'Wants public transparency and a way for residents to contest AI-shaped outcomes.', sources:['OECD AI Principles (2024 update)','UK Algorithmic Transparency Recording Standard']},
+    {id:'s8', role:'State Government Partner', group:'external', perspective:'Wants city rules compatible with state guidance and shared vendor contracts.', sources:['State CIO AI guidance (example internal record)','NIST AI RMF 1.0 (NIST AI 100-1)']},
+    {id:'s9', role:'Residents with limited English or digital access', group:'absent', perspective:'Most affected by wrong or untranslated guidance and least likely to comment on the policy.', sources:['Title VI of the Civil Rights Act of 1964','City language access plan (example internal record)']},
+    {id:'s10', role:'Red Team', group:'redteam', perspective:'Argues how each option fails.', sources:['NIST AI 600-1 Generative AI Profile','Canada Directive on Automated Decision-Making']}
+  ],
+  r1: {s1:[30,35,25,60,15], s2:[40,45,20,70,30], s3:[35,55,30,55,20], s4:[25,30,50,50,10], s5:[30,65,20,60,15], s6:[15,25,55,40,10], s7:[55,60,15,65,25], s8:[35,45,30,55,20], s9:[60,40,20,50,25], s10:[65,70,45,80,35]},
+  // final round-3 values, including the scripted evidence steer (+8 on R4, +5 on R5)
+  r3final: {s1:[35,45,25,70,20], s2:[40,50,20,75,30], s3:[35,60,25,70,25], s4:[30,40,35,65,15], s5:[35,65,20,70,20], s6:[20,30,40,65,15], s7:[50,60,20,70,25], s8:[35,50,30,70,20], s9:[55,45,20,65,25], s10:[60,65,40,80,35]},
+  steerShift: [0,0,0,8,5]
+};
+
+// Where to look and next step for each demo matrix item
+const MX = {
+  'NIST AI 600-1 treats data privacy and information security as distinct generative AI risk areas.':{where:'NIST AI 600-1, Generative AI Profile (nist.gov)',next:'Use its risk areas as the checklist for a data-handling gate.'},
+  "Canada's Directive on Automated Decision-Making scales requirements to a system's impact level.":{where:'Treasury Board of Canada Secretariat: the Directive and its Algorithmic Impact Assessment tool (canada.ca)',next:'Adapt its impact questionnaire as a first draft of the tiers.'},
+  'The OECD AI Principles call for transparency and for people adversely affected to be able to challenge AI-shaped outcomes.':{where:'OECD AI Principles, 2024 update (oecd.ai)',next:'Draft the resident contest route against this principle.'},
+  'What are the base rates for wrong guidance and data incidents in comparable government chatbots?':{where:'OECD AI Incidents Monitor (oecd.ai); AI Incident Database (incidentdatabase.ai); public algorithm registers such as Amsterdam and Helsinki',next:'Have a policy analyst pull government chatbot incidents into a one-page desk review.'},
+  'Are chatbot conversation logs public records under the retention schedule, and for how long must they be kept?':{where:"State public records act; the City's records retention schedule; City Attorney's Office",next:'Request a written opinion from the City Attorney before any pilot launches.'},
+  "How accurate are candidate tools in the City's most-used non-English languages?":{where:'City language access plan; vendor test results; community organizations serving limited-English residents',next:'Require vendors to test in the top languages and have native speakers review sample answers.'},
+  'Who owns multilingual accuracy testing, and what would it cost?':{where:'Language access coordinator; Resident Services budget',next:'Assign an owner at the next steering meeting.'},
+  "Resident Services likely holds call wait-time data that hasn't been shared with this group.":{where:'Resident Services call-center supervisor',next:'Ask for recent wait-time and top-question reports.'},
+  'IT and procurement likely know which current contracts already allow usage monitoring.':{where:'IT contract manager; procurement office',next:'Ask for a list of AI-capable contracts and their monitoring clauses.'},
+  'Which departments already use consumer AI tools informally?':{where:'Department heads; IT help desk and network logs',next:'Run a short anonymous staff survey.'},
+  'Pre-mortem: self-scoring drifts low and no one audits tier scores.':{where:'Red Team pre-mortem',next:'Plan an independent audit of a sample of tier scores each quarter.'},
+  'Pre-mortem: a pause pushes use underground and increases undocumented AI use.':{where:'Red Team pre-mortem',next:'If any pause is chosen, log existing use from day one.'}
+};
+function mItem(x){
+  if (!x || x==='null') return null;
+  if (typeof x==='string'){ const m=MX[x]; return {text:x, where:m?.where||'', next:m?.next||''}; }
+  if (typeof x==='object'){ const text=String(x.item||x.text||'').trim(); if (!text||text==='null') return null; return {text, where:String(x.where||x.source||x.who||'').replace(/^null$/,''), next:String(x.next||x.next_step||'').replace(/^null$/,'')}; }
+  return null;
+}
+function addMatrix(k, list){ for (const raw of (Array.isArray(list)?list:[])){ const it=mItem(raw); if (it && !S.matrix[k].some(c=>c.text===it.text)) S.matrix[k].push(it); } }
+
+function demoScript(){
+  const E = [];
+  const T = (seat,type,text,src,extra={}) => E.push({k:'turn',seat,type,text,source:src,...extra});
+  const seal = (seat,round,est) => E.push({k:'seal',seat,round,est});
+  const S_ = id => DEMO.seats.find(s=>s.id===id).sources;
+  E.push({k:'stage',to:'r1'});
+  T('mod','moderator','Round 1. Each seat states a position, then rates the five risks privately. Estimates stay sealed until every seat has rated. Base-rate check first: how often have similar city deployments had each problem? No seat holds a sourced base rate, so that goes on the verification list.',null,{verify:['Base rates: how often have comparable city or state resident-facing chatbots given wrong guidance or had data incidents?'],matrix:{ku:['What are the base rates for wrong guidance and data incidents in comparable government chatbots?']}});
+  T('s1','position',"Our procurement review already covers vendors, contracts and accessibility. I'd add AI-specific questions to it rather than build a parallel process. A separate review board would duplicate work we already do.",S_('s1')[1]); seal('s1','r1',DEMO.r1.s1);
+  T('s2','position',"Procurement review checks the vendor, not what staff paste into the tool. The generative AI profile lists data privacy and information security as distinct risk areas. I support a tiered assessment with a data-handling gate at every tier.",S_('s2')[0],{matrix:{kk:['NIST AI 600-1 treats data privacy and information security as distinct generative AI risk areas.']}}); seal('s2','r1',DEMO.r1.s2);
+  T('s3','position',"A chatbot answering eligibility questions is closer to a decision aid than a web page. Canada's directive scales requirements to impact level, and that model fits our exposure. I'd support tiers, with a human answer path for anything about benefits or deadlines.",S_('s3')[0],{matrix:{kk:["Canada's Directive on Automated Decision-Making scales requirements to a system's impact level."]}}); seal('s3','r1',DEMO.r1.s3);
+  T('s4','position',"Long call-center waits are the resident harm we see every day, and a pause keeps that harm going. I can accept review, but it has to finish in weeks, not quarters.",null,{verify:['Current call-center wait times and abandonment rates for Resident Services.'],matrix:{uk:["Resident Services likely holds call wait-time data that hasn't been shared with this group."]}}); seal('s4','r1',DEMO.r1.s4);
+  T('s5','position',"If a chatbot shapes what a resident was told, that exchange may be a public record. Retention settings need to be decided before launch, not after the first request arrives.",S_('s5')[0],{matrix:{ku:['Are chatbot conversation logs public records under the retention schedule, and for how long must they be kept?']}}); seal('s5','r1',DEMO.r1.s5);
+  T('s6','position',"Vendors can meet clear requirements. What we can't price is an open-ended review. A published checklist aligned to ISO/IEC 42001 or the NIST framework would let a vendor prepare once and sell to many cities.",S_('s6')[0]); seal('s6','r1',DEMO.r1.s6);
+  T('s7','position',"Residents should be able to see which services use AI and contest outcomes. A registry alone is a list, not accountability. I'd support tiers only if the registry is public and includes a way to contest.",S_('s7')[0],{matrix:{kk:['The OECD AI Principles call for transparency and for people adversely affected to be able to challenge AI-shaped outcomes.']}}); seal('s7','r1',DEMO.r1.s7);
+  T('s8','position',"Several vendors may already hold state master contracts. If city requirements diverge from state guidance, departments could face duplicate reviews or lose access to those contracts.",S_('s8')[0],{verify:['Which state master contracts cover generative AI tools, and what review do they already require?']}); seal('s8','r1',DEMO.r1.s8);
+  T('s9','position',"The people this chatbot would serve most are the least likely to spot a wrong answer or complain about it. An English-only test says nothing about accuracy in other languages. Whatever option you pick, test in the languages residents actually use.",S_('s9')[1],{matrix:{ku:["How accurate are candidate tools in the City's most-used non-English languages?"]}}); seal('s9','r1',DEMO.r1.s9);
+  T('s10','position',"Each option has a failure path. Do nothing: staff adopt tools anyway and nobody knows. Registry: entries go stale within months. Tiers: every department self-scores low. Pause: shadow AI grows while the framework is drafted.",null); seal('s10','r1',DEMO.r1.s10);
+  E.push({k:'reveal',round:'r1'});
+  E.push({k:'stage',to:'r2'});
+  T('mod','moderator','Round 2: debate. A challenge must name the claim it disputes. Unsourced factual claims go to the verification list.',null);
+  T('s4','challenge',"Our pilot scope is hours, locations and how to apply. It never determines eligibility.",S_('s4')[0],{disputes:'A chatbot answering eligibility questions is closer to a decision aid than a web page.',target:'s3'});
+  T('s3','concession',"Fair for that scope. I'd still tier by what the tool is able to say, not what the department intends. Scope drift is where liability starts.",S_('s3')[0]);
+  T('s2','challenge',"Procurement happens once, but prompts and data flows change after launch. Nothing in procurement watches that.",null,{disputes:'Our procurement review already covers this.',target:'s1'});
+  T('s1','concession',"Agreed that post-launch monitoring isn't in procurement today. I'd add it as a contract condition rather than create a separate board.",S_('s1')[1],{matrix:{uk:['IT and procurement likely know which current contracts already allow usage monitoring.']}});
+  T('s6','challenge',"A registry with a named owner and review date for each tool creates accountability without slowing launches.",S_('s6')[0],{disputes:'A registry alone is a list, not accountability.',target:'s7'});
+  T('s7','position',"Named owners help. Without a contest route, a resident who got a wrong answer still has nowhere to go. That piece isn't optional for us.",S_('s7')[0]);
+  T('s5','position',"I can support the tiered option with one condition: logging is on at every tier, including the lowest.",S_('s5')[1]);
+  T('s9','challenge',"When a resident asks 'can I apply?' and the tool says 'no,' that works as an eligibility answer to them, whatever the pilot scope says.",null,{disputes:'The pilot never determines eligibility.',target:'s4'});
+  T('s4','concession',"That's real. We can route any 'am I eligible' question to staff and log it.",S_('s4')[0]);
+  E.push({k:'steer',scripted:true,text:'Staff-provided (example): an informal check in three departments found staff pasting resident emails into consumer chatbots to draft replies.',risks:[3,4],dir:1,sizes:DEMO.steerShift});
+  T('s10','premortem',"It's 12 months later and the tiered assessment failed. Why? Departments self-scored every tool at the lowest tier, nobody audited the scores, and the first wrong-guidance incident surfaced through a news story, not the registry.",S_('s10')[1],{matrix:{uu:['Pre-mortem: self-scoring drifts low and no one audits tier scores.']}});
+  T('s10','premortem',"It's 12 months later and the pause failed. Staff kept using consumer tools with no logging, so the City had more undocumented AI use than before the pause.",null,{matrix:{uu:['Pre-mortem: a pause pushes use underground and increases undocumented AI use.']}});
+  T('s8','position',"Self-scoring failure is avoidable if tier scores are checked by someone outside the department. The state might share a reviewer pool.",S_('s8')[0],{verify:['Does the state offer, or plan, a shared AI reviewer pool that cities can use?']});
+  T('mod','moderator',"Emerging camps. First: a tiered assessment with conditions, favored by Information Security, the City Attorney's Office, Records, the State partner and, with a contest route, Civil Liberties. Second: a lighter touch, where IT and Vendors prefer AI checks inside procurement plus a registry. Third: speed first, where Resident Services accepts review only with a time limit. The absent-voice seat's language-testing condition is unopposed, but no one has taken ownership of it. Pausing for human steering.",null,{matrix:{ku:['Who owns multilingual accuracy testing, and what would it cost?']}});
+  E.push({k:'pause'});
+  E.push({k:'stage',to:'r3'});
+  T('mod','moderator','Round 3: each seat re-rates the risks and says what moved it.',null);
+  const why = {
+    s1:"The shadow-AI evidence moved me most. Doing nothing more now looks riskier than I thought.",
+    s2:"The self-scoring pre-mortem raised my estimate of undocumented use.",
+    s3:"The narrow pilot scope and the routing commitment lowered my launch-delay concern slightly.",
+    s4:"Hearing that review can be time-limited lowered my delay estimate. The shadow-AI evidence raised the rest.",
+    s5:"Undocumented use was already high for me. Shadow AI went up.",
+    s6:"Tier criteria published in advance lower my delay concern.",
+    s7:"Routing eligibility questions to staff lowers my wrong-guidance estimate a little.",
+    s8:"The shadow-AI evidence moved me most.",
+    s9:"Routing helps, but nothing I heard addresses accuracy in other languages.",
+    s10:"The pause pre-mortem raised shadow AI. The rest stands."
+  };
+  for (const s of DEMO.seats){
+    const base = DEMO.r3final[s.id].map((v,i)=>v-DEMO.steerShift[i]);
+    E.push({k:'r3turn',seat:s.id,text:why[s.id],est:base});
+  }
+  E.push({k:'reveal',round:'r3'});
+  E.push({k:'stage',to:'outputs'});
+  E.push({k:'outputs',
+    summary:{
+      headline:'Most seats back a tiered impact assessment, but only with conditions attached. No seat fully supports doing nothing more.',
+      conditions:['Review finishes in weeks, not quarters (Resident Services)','Tier criteria are published in advance (Vendors)','Tier scores are checked by someone outside the department (State partner, Red Team)','Logging is on at every tier (Records)','Tools are tested in the languages residents use (absent voice)'],
+      dissent:'IT and Vendors would rather add AI checks to procurement than create a new review. The Red Team opposes a registry on its own, and a pause draws only conditional support.'
+    },
+    matrix:{uk:['Which departments already use consumer AI tools informally?']},
+    landing:{
+      o1:{s1:'conditional',s2:'oppose',s3:'oppose',s4:'conditional',s5:'oppose',s6:'conditional',s7:'oppose',s8:'oppose',s9:'oppose',s10:'oppose'},
+      o2:{s1:'support',s2:'conditional',s3:'conditional',s4:'support',s5:'conditional',s6:'support',s7:'conditional',s8:'support',s9:'conditional',s10:'oppose'},
+      o3:{s1:'conditional',s2:'support',s3:'support',s4:'conditional',s5:'support',s6:'conditional',s7:'conditional',s8:'support',s9:'conditional',s10:'conditional'},
+      o4:{s1:'oppose',s2:'conditional',s3:'oppose',s4:'oppose',s5:'oppose',s6:'oppose',s7:'conditional',s8:'oppose',s9:'conditional',s10:'oppose'}
+    },
+    conditions:{
+      o1:'Only acceptable to IT, Vendors and Resident Services if post-launch monitoring is added to contracts.',
+      o2:'Civil Liberties and Records want a contest route and logging; Security wants a data-handling gate.',
+      o3:'Review must be time-limited (Resident Services), criteria published in advance (Vendors), scores checked outside the department (State, Red Team), logging at every tier (Records) and multilingual testing (absent voice).',
+      o4:'Supported only as a short, dated pause with logging of existing use.'
+    },
+    questions:[
+      "Records counsel: are chatbot conversation logs public records under the current retention schedule?",
+      "Language access coordinator: how should multilingual accuracy be tested before launch, and by whom?",
+      "State CIO office: do state master contracts already require AI review, and can cities rely on it?",
+      "Procurement: can post-launch monitoring be added to existing contracts without re-bidding?"
+    ],
+    consult:[
+      {role:'Resident Services call-center supervisor', why:'Holds wait-time and question-type data nobody has written down.'},
+      {role:'Language access coordinator', why:'Owns the language access plan; the absent-voice condition has no owner.'},
+      {role:'Records management officer', why:'Retention of chatbot logs is undecided.'},
+      {role:'State CIO office AI lead', why:'Compatibility with state contracts and a possible shared reviewer pool.'},
+      {role:'Community organizations serving limited-English residents', why:'The affected group is least represented in public comment.'},
+      {role:'Privacy officer', why:'Staff already paste resident emails into consumer tools (staff-provided evidence).'}
+    ]
+  });
+  T('mod','moderator','Outputs are ready below. This record informs a decision; it does not make one.',null);
+  return E;
+}
+
+/* ---------- state ---------- */
+let S;
+function freshState(mode){
+  const base = {
+    mode, stage:'setup', rawQuestion:'', question:'', questionConfirmed:false, decisionType:'deliberative', horizon:12, context:'',
+    options:[], risks:[], seats:[], turns:[], est:{r1:{}, r3:{}}, current:{}, submitted:{r1:{}, r3:{}}, revealed:{r1:false,r3:false},
+    shift:[], matrix:{kk:[],ku:[],uk:[],uu:[]}, verify:[], steers:[], expertQs:[], consult:[], landing:{}, conditions:{},
+    summary:null, speaking:null, selected:null, queue:[], playing:false, awaitingSteer:false, speed:1, reviewDate:addMonths(12),
+    live:{phase:null, r1:{}, r2:null, r3:{}, error:null, busy:null, drafted:false}, steerTab:'evidence', started:false, finished:false
+  };
+  if (mode==='demo'){
+    Object.assign(base, {
+      rawQuestion:DEMO.rawQuestion, question:DEMO.question, questionConfirmed:true, decisionType:DEMO.decisionType, horizon:DEMO.horizon,
+      options:structuredClone(DEMO.options), risks:structuredClone(DEMO.risks),
+      seats:DEMO.seats.map(s=>({...structuredClone(s), included:true, abbr:abbr(s.role)})),
+      context:'Example scenario. All internal records named here are fictional placeholders.'
+    });
+    base.seats.find(s=>s.id==='s10').abbr='RED';
+    base.seats.find(s=>s.id==='s9').abbr='ABS';
+    base.seats.find(s=>s.id==='s1').abbr='IT';
+    base.seats.find(s=>s.id==='s2').abbr='SEC';
+    base.seats.find(s=>s.id==='s3').abbr='LAW';
+    base.seats.find(s=>s.id==='s4').abbr='RES';
+    base.seats.find(s=>s.id==='s5').abbr='REC';
+    base.seats.find(s=>s.id==='s6').abbr='VEN';
+    base.seats.find(s=>s.id==='s7').abbr='CIV';
+    base.seats.find(s=>s.id==='s8').abbr='STA';
+  }
+  base.shift = base.risks.map(()=>0);
+  base.reviewDate = addMonths(base.horizon);
+  return base;
+}
+S = freshState('demo');
+
+const seatById = id => S.seats.find(s=>s.id===id);
+const inSeats = () => S.seats.filter(s=>s.included);
+function speakerInfo(id){
+  if (id==='mod') return {name:'Moderator', color:'var(--g-mod)'};
+  if (id==='staff') return {name:'Staff (human steer)', color:'var(--g-staff)'};
+  const s = seatById(id); if (!s) return {name:'Unknown seat', color:'var(--ink-3)'};
+  return {name:s.role, color:GROUPS[s.group]?.color || 'var(--ink-3)'};
+}
+
+/* ---------- capabilities ---------- */
+let SAMPLE = undefined, DL = undefined; // undefined = checking, null = unavailable
+const ERR = {
+  not_granted:'Claude access was not allowed for this page. Live features are off for this visit.',
+  sampling_disabled:'Claude is not available for this account.',
+  rate_limited:'Too many requests right now. Wait a minute, then retry.',
+  session_expired:'Your Claude session expired. Sign in again, then retry.',
+  refused:'Claude declined this request. Rephrase the question or context and retry.',
+  invalid_json:'The reply could not be read as structured data. Retry this step.',
+  prompt_too_large:'The session is too long to send. Shorten the context and retry.',
+  cancelled:'Stopped.',
+  unavailable:'Live generation needs this page opened in Claude.'
+};
+const errCopy = e => ERR[e?.code] || 'Claude could not finish this step. Retry when ready.';
+
+/* ---------- estimates & stats ---------- */
+function statsFor(map){
+  const ids = Object.keys(map).filter(id=>seatById(id)?.included);
+  return S.risks.map((r,i)=>{
+    const v = ids.map(id=>map[id]?.[i]).filter(x=>typeof x==='number');
+    if (!v.length) return null;
+    const mn=Math.min(...v), mx=Math.max(...v);
+    return {n:v.length, median:median(v), min:mn, max:mx, spread:mx-mn};
+  });
+}
+function latestMap(){ return S.current; }
+function setSeatEst(seatId, round, est){
+  const arr = S.risks.map((_,i)=>clamp(est?.[i]));
+  S.est[round][seatId] = arr; S.current[seatId] = [...arr]; S.submitted[round][seatId] = true;
+}
+function applyEvidence(text, riskIdx, dir, sizes, scripted){
+  // demo mechanics: uniform shift for every seat, applied to current + latest snapshot, and carried forward
+  riskIdx.forEach(i=>{ S.shift[i] += dir*sizes[i]; });
+  for (const id of Object.keys(S.current)){
+    riskIdx.forEach(i=>{ S.current[id][i] = clamp(S.current[id][i] + dir*sizes[i]); });
+    const snap = S.est.r3[id] ? S.est.r3 : S.est.r1;
+    if (snap[id]) riskIdx.forEach(i=>{ snap[id][i] = clamp(snap[id][i] + dir*sizes[i]); });
+  }
+  const rl = riskIdx.map(i=>S.risks[i].id).join(', ');
+  const sz = riskIdx.map(i=>`${S.risks[i].id} ${dir>0?'+':'−'}${sizes[i]}`).join(', ');
+  pushTurn({seat:'staff', type:'steer', text:`Evidence: ${text}`, source:'Staff-provided', note:`Applied to every seat's estimates: ${sz} pts${scripted?' (scripted example)':''}.`});
+  logSteer('Evidence', text, `Shifted ${rl}`);
+  S.verify = uniq([...S.verify, `Verify staff-provided evidence: ${text}`]);
+}
+
+/* ---------- turns, steers ---------- */
+function pushTurn(t){
+  const turn = {i:S.turns.length+1, stage:S.stage, ...t};
+  if (turn.seat!=='mod' && turn.seat!=='staff' && turn.source===undefined) turn.source=null;
+  S.turns.push(turn);
+  S.speaking = turn.seat;
+  if (t.matrix) for (const k of ['kk','ku','uk','uu']) addMatrix(k, t.matrix[k]);
+  if (t.verify) S.verify = uniq([...S.verify, ...arr(t.verify)]);
+}
+function logSteer(kind, text, effect){
+  S.steers.push({kind, text, effect, stage:STAGES.find(x=>x[0]===S.stage)?.[1], at:new Date().toLocaleString()});
+}
+
+/* ---------- event player ---------- */
+function applyEvent(ev){
+  switch(ev.k){
+    case 'stage': S.stage = ev.to; if (ev.to==='outputs') S.finished=true; break;
+    case 'turn': pushTurn(ev); break;
+    case 'seal': setSeatEst(ev.seat, ev.round, ev.est.map((v,i)=>v+(S.shift[i]||0))); S.speaking=ev.seat; break;
+    case 'reveal': revealRound(ev.round); break;
+    case 'steer': applyEvidence(ev.text, ev.risks, ev.dir, ev.sizes, ev.scripted); break;
+    case 'pause': S.playing=false; S.awaitingSteer=true; break;
+    case 'r3turn': {
+      const before = S.est.r1[ev.seat] || S.current[ev.seat];
+      setSeatEst(ev.seat,'r3', ev.est.map((v,i)=>v+(S.shift[i]||0)));
+      const after = S.est.r3[ev.seat];
+      const deltas = before ? after.map((v,i)=>({id:S.risks[i].id, d:v-before[i]})).filter(x=>x.d!==0) : [];
+      pushTurn({seat:ev.seat, type:'re-estimate', text:ev.text, source:ev.source===undefined?null:ev.source, deltas, estimates:after});
+      break;
+    }
+    case 'outputs':
+      if (ev.landing) S.landing = ev.landing;
+      if (ev.conditions) S.conditions = ev.conditions;
+      if (ev.questions) S.expertQs = uniq([...S.expertQs, ...arr(ev.questions)]);
+      if (ev.consult) S.consult = ev.consult;
+      if (ev.matrix) for (const k of ['kk','ku','uk','uu']) addMatrix(k, ev.matrix[k]);
+      if (ev.summary) S.summary = ev.summary;
+      break;
+    case 'error': S.live.error = ev; S.playing=false; break;
+  }
+}
+function revealRound(round){
+  S.revealed[round] = true;
+  const st = statsFor(round==='r1' ? S.est.r1 : S.current);
+  const rows = st.map((x,i)=>x && {...x, r:S.risks[i]}).filter(Boolean);
+  if (!rows.length) return;
+  const wide = rows.reduce((a,b)=>b.spread>a.spread?b:a), narrow = rows.reduce((a,b)=>b.spread<a.spread?b:a);
+  const low = rows.filter(x=>x.spread<=LOW);
+  let text;
+  if (round==='r1'){
+    text = `Estimates revealed together. Widest disagreement: ${wide.r.id} ${wide.r.short} (${wide.min}–${wide.max}%, spread ${wide.spread} pts). Narrowest: ${narrow.r.id} ${narrow.r.short} (${narrow.min}–${narrow.max}%, spread ${narrow.spread} pts). A wide spread means a risk is contested or poorly understood, not that it is small.`;
+  } else {
+    const st1 = statsFor(S.est.r1);
+    const moves = rows.map(x=>{ const i=S.risks.indexOf(x.r); const b=st1[i]; return b ? {r:x.r, dm:x.median-b.median, ds:x.spread-b.spread, b, a:x} : null; }).filter(Boolean);
+    const big = moves.length ? moves.reduce((a,b)=>Math.abs(b.dm)>Math.abs(a.dm)?b:a) : null;
+    text = `Round 3 estimates revealed. ` + (big ? `Largest movement: ${big.r.id} ${big.r.short}, median ${big.b.median}% → ${big.a.median}%. ` : '') +
+      moves.map(m=>`${m.r.id} spread ${m.b.spread}→${m.a.spread}`).join('; ') + '.';
+  }
+  if (low.length) text += ` Warning: ${low.map(x=>`${x.r.id} (spread ${x.spread})`).join(', ')} show low disagreement. Seats built on one model tend to agree, so treat this as possible false consensus and test it with real people.`;
+  pushTurn({seat:'mod', type:'moderator', text, source:null});
+}
+
+let timer=null;
+function delayFor(ev){ const base = ev.k==='turn'||ev.k==='r3turn' ? 1900 : ev.k==='seal' ? 450 : 700; return base / S.speed; }
+function stepOnce(){
+  if (!S.queue.length) return false;
+  applyEvent(S.queue.shift()); renderAll(); return true;
+}
+function loop(){
+  clearTimeout(timer);
+  if (!S.playing) return;
+  if (!S.queue.length){ renderAll(); timer=setTimeout(loop, 500); return; }
+  const ev = S.queue[0];
+  stepOnce();
+  if (S.playing) timer=setTimeout(loop, delayFor(ev));
+}
+function releaseGate(){ if (S.awaitingSteer){ S.awaitingSteer=false; if (S.gateResolve){ const r=S.gateResolve; S.gateResolve=null; r(); } } }
+function play(){
+  releaseGate();
+  S.playing=true; renderAll(); loop();
+}
+function pause(){ S.playing=false; clearTimeout(timer); renderAll(); }
+function toNextPause(){
+  pause(); releaseGate();
+  let n=0;
+  while (S.queue.length && n<500){ const ev=S.queue[0]; applyEvent(S.queue.shift()); n++; if (ev.k==='pause') break; }
+  renderAll();
+}
+
+/* ---------- live mode (Claude via the sample capability) ---------- */
+const GUARD = `Rules: You simulate a ROLE, never a real named person, and never put words in a real person's mouth. Do not invent statistics, percentages from studies, quotes, dates, or facts. You may cite only the numbered sources allowed for the seat; if a claim does not come from them, use source_index 0 (reasoning only). Plain language, short sentences. Keep politically contested topics balanced.`;
+function sessionBrief(){
+  const ctx = (S.context||'').slice(0,6000);
+  return [
+    `Decision question: ${S.question}`,
+    `Decision type: ${S.decisionType} (${S.decisionType==='deliberative'?'informs a decision':'records a decision'}). Time horizon: ${S.horizon} months.`,
+    `Response options:\n${S.options.map(o=>`- ${o.id} ${o.label}: ${o.desc}`).join('\n')}`,
+    `Risks to estimate (likelihood 0-100 that each happens within ${S.horizon} months):\n${S.risks.map(r=>`- ${r.id} ${r.short}: ${r.text}`).join('\n')}`,
+    ctx ? `Internal context provided by staff (treat as the seat's named internal record only if it is in the seat's sources):\n${ctx}` : '',
+    S.steers.length ? `Human steers so far:\n${S.steers.map(s=>`- ${s.kind}: ${s.text}`).join('\n')}` : ''
+  ].filter(Boolean).join('\n\n');
+}
+function seatBrief(s){ return `Role: ${s.role} (group: ${GROUPS[s.group]?.label}). Perspective: ${s.perspective}\nAllowed sources:\n${s.sources.map((x,i)=>`${i+1}. ${x}`).join('\n')}`; }
+function transcriptText(maxChars=14000){
+  let out = S.turns.map(t=>`[${speakerInfo(t.seat).name} | ${TYPE_LABEL[t.type]||t.type}] ${t.disputes?`(disputes: "${t.disputes}") `:''}${t.text}`).join('\n');
+  if (out.length>maxChars) out = '…' + out.slice(-maxChars);
+  return out;
+}
+const srcFrom = (s, idx) => { const n=Number(idx); return n>=1 && n<=s.sources.length ? s.sources[n-1] : null; };
+const estArr = a => S.risks.map((_,i)=>clamp(Array.isArray(a)?a[i]:0));
+function busy(msg){ S.live.busy = msg; renderFoot(); }
+async function askJSON(prompt, tier='default'){
+  if (!SAMPLE) throw {code:'unavailable'};
+  return await SAMPLE.json(prompt, {modelTier:tier});
+}
+
+async function draftSetup(){
+  const q = $('#liveQ').value.trim(); if (!q){ toast('Enter the policy question first.'); return; }
+  S.rawQuestion = q; S.context = $('#liveCtx').value; S.decisionType = $('#liveType').value; S.horizon = Number($('#liveHorizon').value)||12;
+  S.reviewDate = addMonths(S.horizon);
+  busy('Drafting setup…'); renderSetup();
+  const prompt = `You are the setup assistant for Policy Tabletop, a rehearsal tool that helps government staff prepare for a real decision by simulating a structured debate among perspectives. It does not decide anything.
+
+Intake question from staff: ${q}
+Time horizon: ${S.horizon} months. Decision type: ${S.decisionType}.
+Internal context (may be empty):
+${(S.context||'').slice(0,8000)}
+
+Return only JSON of this shape:
+{"sharpened":"one precise decision question",
+ "options":[{"label":"≤4 words","desc":"one sentence"}],
+ "seats":[{"role":"role name","group":"internal|external|absent|redteam","perspective":"one sentence","sources":["2 or 3 grounding sources"]}],
+ "risks":[{"short":"≤4 words","text":"one event that either happens or not within the horizon"}]}
+
+Requirements: 3 or 4 options, including a minimal or "do nothing more" option. 8 to 12 seats: internal stakeholders (e.g. IT, security, legal, affected departments); external stakeholders (industry, civil society, partners, other levels of government); exactly one seat with group "absent" for the people most affected but least represented; exactly one seat with group "redteam" named "Red Team" whose job is to argue how each option fails. Exactly 5 risks. Sources must be real public documents you are confident exist (laws, standards, official guidance) or internal records named generically and marked "(internal record)", using the staff context where possible. Seats are roles, never real named people. Invent no statistics. If the topic is politically contested, spread seats across the range of views.`;
+  try{
+    const r = await askJSON(prompt,'default');
+    S.question = String(r.sharpened||q); S.questionConfirmed = false;
+    S.options = (r.options||[]).slice(0,4).map((o,i)=>({id:'o'+(i+1), label:String(o.label||`Option ${i+1}`), desc:String(o.desc||'')}));
+    S.risks = (r.risks||[]).slice(0,5).map((x,i)=>({id:'R'+(i+1), short:String(x.short||`Risk ${i+1}`), text:String(x.text||'')}));
+    S.seats = (r.seats||[]).slice(0,12).map((x,i)=>({id:'s'+(i+1), role:String(x.role||`Seat ${i+1}`), group:GROUPS[x.group]?x.group:'internal', perspective:String(x.perspective||''), sources:(x.sources||[]).map(String).slice(0,3), included:true, abbr:''}));
+    S.seats.forEach(s=>{ s.abbr = s.group==='redteam' ? 'RED' : s.group==='absent' ? 'ABS' : abbr(s.role); });
+    S.shift = S.risks.map(()=>0);
+    S.live.drafted = true; S.live.busy = null;
+  }catch(e){ S.live.busy=null; toast(errCopy(e)); }
+  renderAll();
+}
+
+async function liveRun(from){
+  const my = S;
+  S.live.error = null;
+  const enqueue = ev => { if (S!==my) throw {code:'stale'}; S.queue.push(ev); };
+  try{
+    if (from==='r1'){
+      S.live.phase='r1';
+      if (!S.live.r1Started){ S.live.r1Started=true; enqueue({k:'stage',to:'r1'}); enqueue({k:'turn',seat:'mod',type:'moderator',text:`Round 1. Each seat states a position, then rates the ${S.risks.length} risks privately. Estimates stay sealed until every seat has rated. Base rates first: seats are asked how often similar policies elsewhere had each problem, and to say so when they don't know.`,source:null}); }
+      const todo = inSeats().filter(s=>!S.live.r1[s.id]);
+      for (let i=0;i<todo.length;i+=3){
+        await Promise.all(todo.slice(i,i+3).map(async s=>{
+          busy(`Round 1: ${s.role} is preparing a position and sealed estimates…`);
+          const r = await askJSON(`You are one seat in Policy Tabletop, a rehearsal of a government policy debate.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nRound 1, independent estimates. You have not seen any other seat's position or estimates. First consider base rates: how often similar policies elsewhere had each problem. Only state a base rate if it is in your sources; otherwise say it is unknown.\n\nReturn only JSON: {"position":"your position in 2-3 sentences, first person, as the role","source_index":0,"estimates":[${S.risks.map(r=>r.id).join(', ')} as integers 0-100],"known_unknowns":[{"item":"open question (up to 2)","where":"where staff could look: a named law, standard, dataset, office or public source you are confident exists","next":"one concrete next step"}],"unknown_knowns":[{"item":"something someone inside likely knows but hasn't written down (up to 1)","who":"the role likely to know","next":"what to ask them for"}],"verify":["up to 2 factual claims you made without a source"]}\n\n${GUARD}`, 'quick');
+          if (S!==my) throw {code:'stale'}; S.live.r1[s.id] = {position:String(r.position||''), source:srcFrom(s,r.source_index), est:estArr(r.estimates), ku:r.known_unknowns||[], uk:r.unknown_knowns||[], verify:r.verify||[]};
+          const d = S.live.r1[s.id];
+          enqueue({k:'turn',seat:s.id,type:'position',text:d.position,source:d.source,verify:d.verify,matrix:{ku:d.ku,uk:d.uk}});
+          enqueue({k:'seal',seat:s.id,round:'r1',est:d.est.map((v,i)=>v-(S.shift[i]||0))});
+        }));
+      }
+      enqueue({k:'reveal',round:'r1'});
+      from='r2';
+    }
+    if (from==='r2'){
+      S.live.phase='r2';
+      busy('Round 2: the moderator is running the debate…');
+      const seats = inSeats();
+      const est1 = seats.map(s=>`${s.id} ${s.role}: ${(S.live.r1[s.id]?.est||[]).map((v,i)=>`${S.risks[i].id}=${v}`).join(' ')}`).join('\n');
+      const pos1 = seats.map(s=>`${s.id} ${s.role}: ${S.live.r1[s.id]?.position||'(no position)'}`).join('\n');
+      const red = seats.find(s=>s.group==='redteam');
+      const r = await askJSON(`You are the neutral moderator of Policy Tabletop, round 2 (debate). You write the seats' turns, each strictly in its own role and limited to its own numbered sources.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nRound 1 positions:\n${pos1}\n\nRevealed round 1 estimates:\n${est1}\n\nWrite 8 to 12 debate turns in which seats respond to each other. Every challenge must quote the specific claim it disputes in "disputes". Include at least 2 challenges and 1 concession. ${red?`The Red Team seat (${red.id}) must run at least one pre-mortem (type "premortem"): "It's ${S.horizon} months later and [option] failed; why?", including one on the option with most support.`:''} Seats with different perspectives should disagree where their evidence differs; avoid easy consensus. Each turn under 60 words.\n\nReturn only JSON: {"turns":[{"seat":"s1","type":"challenge|concession|position|premortem","disputes":"quoted claim or null","text":"...","source_index":0,"verify":"an unsourced factual claim to check, or null"}],"known_knowns":[{"item":"claim agreed on and sourced","source":"the seat source it comes from","next":"how to use it"}],"known_unknowns":[{"item":"open question","where":"where to look (real public sources, offices or datasets only)","next":"concrete next step"}],"unknown_knowns":[{"item":"something someone internal likely knows but hasn't written down","who":"role to ask","next":"what to ask for"}],"premortem_probes":[{"item":"scenario that probes unknown unknowns","next":"how to test or guard against it"}],"camps":"2 to 4 neutral sentences summarizing the emerging camps, naming seats by role"}\n\n${GUARD}`,'default');
+      if (S!==my) throw {code:'stale'}; S.live.r2 = r;
+      enqueue({k:'stage',to:'r2'});
+      enqueue({k:'turn',seat:'mod',type:'moderator',text:'Round 2: debate. A challenge must name the claim it disputes. Unsourced factual claims go to the verification list.',source:null});
+      for (const t of (r.turns||[])){
+        const s = seatById(String(t.seat)); if (!s) continue;
+        const type = ['challenge','concession','position','premortem'].includes(t.type) ? t.type : 'position';
+        enqueue({k:'turn',seat:s.id,type,text:String(t.text||''),source:srcFrom(s,t.source_index),disputes:t.disputes&&t.disputes!=='null'?String(t.disputes):null,verify:t.verify&&t.verify!=='null'?[String(t.verify)]:[],matrix:type==='premortem'?{uu:[String(t.text||'').slice(0,160)]}:null});
+      }
+      enqueue({k:'turn',seat:'mod',type:'moderator',text:`${r.camps||'Camps are forming.'} Pausing for human steering.`,source:null,matrix:{kk:r.known_knowns||[],ku:r.known_unknowns||[],uk:r.unknown_knowns||[],uu:r.premortem_probes||[]}});
+      enqueue({k:'pause'});
+      S.live.phase='gate';
+      await new Promise(res=>{ S.gateResolve=res; });
+      from='r3';
+    }
+    if (from==='r3'){
+      S.live.phase='r3';
+      if (!S.live.r3Started){ S.live.r3Started=true; enqueue({k:'stage',to:'r3'}); enqueue({k:'turn',seat:'mod',type:'moderator',text:'Round 3: each seat re-rates the risks and says what moved it.',source:null}); }
+      const todo = inSeats().filter(s=>!S.live.r3[s.id]);
+      for (let i=0;i<todo.length;i+=3){
+        await Promise.all(todo.slice(i,i+3).map(async s=>{
+          busy(`Round 3: ${s.role} is re-estimating…`);
+          const mine = S.current[s.id] || S.live.r1[s.id]?.est || [];
+          const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText()}\n\nYour current estimates: ${mine.map((v,i)=>`${S.risks[i].id}=${v}`).join(' ')}\n\nRound 3: re-rate every risk. Move only where the debate or staff evidence gives you a reason. Say what moved you and by how much.\n\nReturn only JSON: {"text":"what moved you, under 50 words, first person","estimates":[integers 0-100 in order ${S.risks.map(r=>r.id).join(', ')}],"source_index":0}\n\n${GUARD}`,'quick');
+          if (S!==my) throw {code:'stale'}; S.live.r3[s.id] = {text:String(r.text||''), est:estArr(r.estimates), source:srcFrom(s,r.source_index)};
+          enqueue({k:'r3turn',seat:s.id,text:S.live.r3[s.id].text,est:S.live.r3[s.id].est.map((v,i)=>v-(S.shift[i]||0)),source:S.live.r3[s.id].source});
+        }));
+      }
+      enqueue({k:'reveal',round:'r3'});
+      from='out';
+    }
+    if (from==='out'){
+      S.live.phase='out';
+      busy('Writing outputs…');
+      const seats = inSeats();
+      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence: where the seats landed","lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nInclude every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said.\n\n${GUARD}`,'default');
+      const landing = {};
+      for (const o of S.options){ landing[o.id]={}; for (const s of seats){ const v=r.landing?.[o.id]?.[s.id]; landing[o.id][s.id] = ['support','conditional','oppose'].includes(v)?v:null; } }
+      enqueue({k:'stage',to:'outputs'});
+      enqueue({k:'outputs',landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):''}});
+      enqueue({k:'turn',seat:'mod',type:'moderator',text:'Outputs are ready below. This record informs a decision; it does not make one.',source:null});
+      S.live.phase='done';
+    }
+    S.live.busy=null; renderFoot();
+  }catch(e){
+    if (e?.code==='stale' || S!==my) return;
+    S.live.busy=null;
+    S.live.error = {phase:S.live.phase==='gate'?'r3':S.live.phase, msg:errCopy(e)};
+    if (e?.code==='not_granted' || e?.code==='sampling_disabled') SAMPLE=null;
+    renderAll();
+  }
+}
+
+/* live steering calls (used in either mode when Claude is available) */
+async function liveChallenge(seat, claim, text){
+  const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(10000)}\n\nA staff facilitator challenges you. Disputed claim: "${claim}". Challenge: ${text}\n\nRespond in character. Concede if the challenge is right, hold if your sources support you. Under 60 words.\nReturn only JSON: {"stance":"concede|hold","text":"...","source_index":0}\n\n${GUARD}`,'quick');
+  return {type: r.stance==='concede'?'concession':'position', text:String(r.text||''), source:srcFrom(seat,r.source_index)};
+}
+async function liveQuestion(q){
+  const seats = inSeats();
+  const r = await askJSON(`You run Policy Tabletop. A staff facilitator asks: "${q}"\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript so far:\n${transcriptText(8000)}\n\nPick the 2 seats best placed to answer, ideally with differing views. Each answers in character, under 50 words, citing only its own numbered sources (source_index, or 0 for reasoning only).\nReturn only JSON: {"answers":[{"seat":"s1","text":"...","source_index":0}]}\n\n${GUARD}`,'quick');
+  return (r.answers||[]).slice(0,2).map(a=>{ const s=seatById(String(a.seat)); return s ? {seat:s.id, text:String(a.text||''), source:srcFrom(s,a.source_index)} : null; }).filter(Boolean);
+}
+async function liveSeatJoin(seat){
+  const r = await askJSON(`You are a seat joining Policy Tabletop mid-session.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(10000)}\n\nState your position in 2-3 sentences and rate every risk.\nReturn only JSON: {"position":"...","source_index":0,"estimates":[integers 0-100 in order ${S.risks.map(r=>r.id).join(', ')}]}\n\n${GUARD}`,'quick');
+  return {text:String(r.position||''), source:srcFrom(seat,r.source_index), est:estArr(r.estimates)};
+}
+async function liveEvidence(text){
+  const seats = inSeats().filter(s=>S.current[s.id]);
+  const r = await askJSON(`You run Policy Tabletop. Staff inject new evidence: "${text}"\n\n${sessionBrief()}\n\nSeats and current estimates:\n${seats.map(s=>`${s.id} ${s.role} (${s.perspective}): ${S.current[s.id].map((v,i)=>`${S.risks[i].id}=${v}`).join(' ')}`).join('\n')}\n\nFor each seat, re-rate every risk in light of the evidence, from that seat's perspective. Move only where the evidence bears on a risk.\nReturn only JSON: {"updates":[{"seat":"s1","estimates":[integers],"why":"under 20 words"}]}\n\n${GUARD}`,'quick');
+  return (r.updates||[]).filter(u=>seatById(String(u.seat)) && S.current[String(u.seat)]);
+}
+
+/* ---------- actions ---------- */
+function setMode(mode){
+  pause(); S = freshState(mode); renderAll(); window.scrollTo({top:0});
+}
+function startTabletop(){
+  if (!S.questionConfirmed){ toast('Confirm the decision question first.'); return; }
+  if (S.options.length<2 || S.risks.length<1 || inSeats().length<3){ toast('Add at least 2 options, 1 risk and 3 seats.'); return; }
+  S.options.forEach((o,i)=>o.id='o'+(i+1)); S.risks.forEach((r,i)=>r.id='R'+(i+1));
+  S.shift = S.risks.map(()=>0);
+  S.started = true; S.reviewDate = addMonths(S.horizon);
+  if (S.mode==='demo'){ S.queue = demoScript(); play(); }
+  else { if (!SAMPLE){ toast(ERR.unavailable); return; } S.playing=true; renderAll(); liveRun('r1'); loop(); }
+  document.getElementById('stage').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function restart(){
+  const k = {rawQuestion:S.rawQuestion, question:S.question, questionConfirmed:S.questionConfirmed, decisionType:S.decisionType, horizon:S.horizon, context:S.context,
+    options:S.options, risks:S.risks, seats:S.seats.filter(s=>!s.addedMid)};
+  const mode=S.mode, drafted=S.live.drafted;
+  pause(); S = freshState(mode); Object.assign(S, k); S.live.drafted = drafted; S.shift = S.risks.map(()=>0); S.reviewDate = addMonths(S.horizon);
+  renderAll(); window.scrollTo({top:0});
+}
+
+async function submitEvidence(){
+  const text = $('#evText').value.trim(); if (!text){ toast('Describe the evidence first.'); return; }
+  const risks = [...document.querySelectorAll('input[name=evRisk]:checked')].map(x=>Number(x.value));
+  if (S.mode==='live' && SAMPLE){
+    pushTurn({seat:'staff',type:'steer',text:`Evidence: ${text}`,source:'Staff-provided',note:'Each seat re-rates with Claude.'});
+    logSteer('Evidence', text, 'Seats re-rated');
+    S.verify = uniq([...S.verify, `Verify staff-provided evidence: ${text}`]);
+    $('#evText').value=''; renderAll(); busy('Seats are re-rating in light of the evidence…');
+    try{
+      const ups = await liveEvidence(text);
+      const hidden = !S.revealed.r1;
+      for (const u of ups){
+        const id=String(u.seat); const before=[...S.current[id]]; const after=estArr(u.estimates);
+        S.current[id]=after; const snap = S.est.r3[id]?S.est.r3:S.est.r1; if (snap[id]) snap[id]=[...after];
+        const deltas = after.map((v,i)=>({id:S.risks[i].id,d:v-before[i]})).filter(x=>x.d!==0);
+        if (deltas.length && !hidden) pushTurn({seat:id,type:'re-estimate',text:String(u.why||'Updated after staff evidence.'),source:null,deltas,estimates:after});
+      }
+      if (hidden) pushTurn({seat:'mod',type:'moderator',text:`${ups.length} seats updated their sealed estimates. Changes appear when estimates are revealed.`,source:null});
+    }catch(e){ toast(errCopy(e)); }
+    S.live.busy=null; renderAll(); return;
+  }
+  if (!risks.length){ toast('Pick at least one risk the evidence bears on.'); return; }
+  const dir = $('#evDir').value==='down' ? -1 : 1; const size = Number($('#evSize').value)||10;
+  const sizes = S.risks.map(()=>size);
+  applyEvidence(text, risks, dir, sizes, false);
+  $('#evText').value=''; renderAll();
+}
+async function submitChallenge(){
+  const seat = seatById($('#chSeat').value); const claim=$('#chClaim').value.trim(); const text=$('#chText').value.trim();
+  if (!seat || !claim || !text){ toast('Pick a seat, quote the claim, and write the challenge.'); return; }
+  pushTurn({seat:'staff',type:'steer',text:`Challenge to ${seat.role}: ${text}`,disputes:claim,source:'Staff-provided'});
+  logSteer('Challenge', `${seat.role}: "${claim}" — ${text}`, SAMPLE?'Seat replied live':'Logged for experts');
+  $('#chClaim').value=''; $('#chText').value=''; renderAll();
+  if (SAMPLE){
+    busy(`${seat.role} is responding…`);
+    try{ const r = await liveChallenge(seat, claim, text); pushTurn({seat:seat.id, type:r.type, text:r.text, source:r.source}); }
+    catch(e){ toast(errCopy(e)); }
+    S.live.busy=null;
+  } else {
+    S.expertQs = uniq([...S.expertQs, `Challenge to ${seat.role}: "${claim}" ${text}`]);
+    pushTurn({seat:'mod',type:'moderator',text:'Challenge logged and added to questions for real experts. A live reply from the seat needs this page opened in Claude.',source:null});
+  }
+  renderAll();
+}
+async function submitQuestion(){
+  const q = $('#qaText').value.trim(); if (!q){ toast('Type a question first.'); return; }
+  pushTurn({seat:'staff',type:'steer',text:`Question: ${q}`,source:'Staff-provided'});
+  logSteer('Question', q, SAMPLE?'Answered by two seats':'Logged for experts');
+  S.expertQs = uniq([...S.expertQs, q]);
+  $('#qaText').value=''; renderAll();
+  if (SAMPLE){
+    busy('Two seats are answering…');
+    try{ const ans = await liveQuestion(q); ans.forEach(a=>pushTurn({seat:a.seat,type:'answer',text:a.text,source:a.source})); }
+    catch(e){ toast(errCopy(e)); }
+    S.live.busy=null;
+  } else {
+    pushTurn({seat:'mod',type:'moderator',text:'Question logged for real experts. Live answers from seats need this page opened in Claude.',source:null});
+  }
+  renderAll();
+}
+async function submitAddSeat(){
+  const role=$('#asRole').value.trim(); const perspective=$('#asPersp').value.trim();
+  const sources=$('#asSrc').value.split('\n').map(x=>x.trim()).filter(Boolean).slice(0,3);
+  if (!role || !perspective){ toast('Give the seat a role and a perspective.'); return; }
+  const id='x'+(S.seats.length+1)+Math.floor(Math.random()*90+10);
+  const seat={id, role, group:$('#asGroup').value, perspective, sources, included:true, abbr:abbr(role), addedMid:true};
+  S.seats.push(seat); S.selected=id;
+  logSteer('Added seat', `${role} (${GROUPS[seat.group].label})`, '');
+  pushTurn({seat:'staff',type:'steer',text:`Added a seat: ${role}. ${perspective}`,source:'Staff-provided'});
+  ['#asRole','#asPersp','#asSrc'].forEach(s=>$(s).value=''); renderAll();
+  if (SAMPLE){
+    busy(`${role} is joining…`);
+    try{ const r=await liveSeatJoin(seat); S.current[id]=r.est; if (S.stage==='r1'||S.stage==='setup') S.est.r1[id]=[...r.est]; if (S.stage==='r3'||S.stage==='outputs') S.est.r3[id]=[...r.est]; pushTurn({seat:id,type:'position',text:r.text,source:r.source,estimates:r.est}); }
+    catch(e){ toast(errCopy(e)); }
+    S.live.busy=null;
+  } else {
+    pushTurn({seat:'mod',type:'moderator',text:`${role} joined. In the scripted demo this seat has no estimates; live sessions generate its position and ratings.`,source:null});
+  }
+  renderAll();
+}
+
+/* ---------- decision record ---------- */
+function tally(oid){ const m=S.landing[oid]||{}; const c={support:0,conditional:0,oppose:0}; for (const s of inSeats()){ const v=m[s.id]; if (c[v]!=null) c[v]++; } return c; }
+function leadingOption(){ let best=null, bs=-1; for (const o of S.options){ const t=tally(o.id); const sc=t.support*2+t.conditional; if (sc>bs){bs=sc;best=o;} } return Object.keys(S.landing).length?best:null; }
+function buildRecord(){
+  const L=[]; const today=new Date().toISOString().slice(0,10);
+  const st1=statsFor(S.est.r1), st3=statsFor(S.current);
+  L.push('# Decision record: Policy Tabletop rehearsal','');
+  L.push('> INFORMS, DOES NOT DECIDE. Seats were simulated perspectives generated with AI. Take every output to real people before relying on it.','');
+  L.push(`- **Question:** ${S.question||'(not set)'}`);
+  L.push(`- **Decision type:** ${S.decisionType==='deliberative'?'Deliberative (informs a decision)':'Decisional (records a decision)'}`);
+  L.push(`- **Time horizon:** ${S.horizon} months`);
+  L.push(`- **Session date:** ${today}`);
+  L.push(`- **Review date:** ${S.reviewDate}`);
+  L.push(`- **Mode:** ${S.mode==='demo'?'Scripted demo (example content, fictional internal records)':'Live session'}`,'');
+  const sd = Object.keys(S.landing).length ? summaryData() : null;
+  L.push('## Executive summary','');
+  if (sd){
+    L.push(sd.headline,'');
+    L.push(`**What ${sd.lead.label} would need:**`); sd.conditions.forEach(c=>L.push(`- ${c}`)); L.push('');
+    L.push(`**Main dissent:** ${sd.dissent}`,'');
+    if (sd.risks.length){ L.push('**Risks to watch:**'); sd.risks.forEach(r=>L.push(`- ${r.text}`)); L.push(''); }
+    L.push('**Before anyone decides:**'); sd.steps.forEach((x,i)=>L.push(`${i+1}. ${x.next}${x.where?` (${x.where})`:''}`)); L.push('');
+  } else L.push('Session not finished.','');
+  L.push('## Options compared','');
+  for (const o of S.options){ const t=tally(o.id); L.push(`- **${o.label}**: ${o.desc}${Object.keys(S.landing).length?` Support ${t.support}, with conditions ${t.conditional}, oppose ${t.oppose}.`:''}${S.conditions[o.id]?` Conditions: ${S.conditions[o.id]}`:''}`); }
+  const lead = leadingOption();
+  L.push('','## Convergence','');
+  L.push(lead ? `Most support: **${lead.label}**. ${S.conditions[lead.id]||''}` : 'Not reached yet.');
+  L.push('','## Dissent','');
+  if (lead){ const opp=inSeats().filter(s=>S.landing[lead.id]?.[s.id]==='oppose'); L.push(opp.length?opp.map(s=>`- ${s.role} opposes ${lead.label}.`).join('\n'):`- No seat opposes ${lead.label} outright.`); const cond=inSeats().filter(s=>S.landing[lead.id]?.[s.id]==='conditional'); if (cond.length) L.push(`- Conditional support from: ${cond.map(s=>s.role).join(', ')}.`); }
+  else L.push('Not reached yet.');
+  const sec=(t,arr,empty)=>{ L.push('',`## ${t}`,''); L.push(arr.length?arr.map(x=>`- ${x}`).join('\n'):`- ${empty}`); };
+  const mx = (list,lab) => list.map(x=>`${x.text}${x.where?` ${lab}: ${x.where}.`:''}${x.next?` Next step: ${x.next}`:''}`);
+  sec('Known knowns (agreed and sourced)', mx(S.matrix.kk,'Source'), 'None recorded.');
+  sec('Known unknowns (research agenda)', mx(S.matrix.ku,'Where to look'), 'None recorded.');
+  sec('Unknown knowns (ask staff)', mx(S.matrix.uk,'Who to ask'), 'None recorded.');
+  sec('Unknown unknowns', ['These cannot be listed. They can only be probed through pre-mortems, pilots and incident reviews.', ...mx(S.matrix.uu,'Found by')], '');
+  sec('Verification list (unsourced claims)', S.verify, 'None.');
+  sec('Questions for real experts', S.expertQs, 'None yet.');
+  sec('People to consult (by role)', S.consult.map(c=>`${c.role}: ${c.why}`), 'None yet.');
+  sec('Human steers', S.steers.map(s=>`${s.at} · ${s.stage} · ${s.kind}: ${s.text}${s.effect?` (${s.effect})`:''}`), 'None.');
+  L.push('','## Next steps','');
+  L.push(`1. Work through the verification list before citing any claim from this session.`);
+  L.push(`2. Put the questions above to real experts and meet the people listed to consult.`);
+  L.push(`3. On ${S.reviewDate}, record which risks occurred and score the estimates stored in the session file (for example with a Brier score).`);
+  L.push('','## Seats (roles, not named people)','');
+  for (const s of inSeats()) L.push(`- **${s.role}** (${GROUPS[s.group].label}${s.addedMid?', added mid-session':''}): ${s.perspective} Sources: ${s.sources.join('; ')||'none listed'}.`);
+  return L.join('\n');
+}
+function sessionJSON(){
+  const {queue, gateResolve, playing, ...rest} = S;
+  return JSON.stringify({tool:'Policy Tabletop', version:1, exportedAt:new Date().toISOString(), ...rest}, null, 2);
+}
+async function save(filename, data){
+  if (!DL){ toast('Downloads are not available here. Use Copy instead.'); return; }
+  try{ await DL.save({filename, data}); }
+  catch(e){ if (e?.code!=='declined') toast(e?.code==='rate_limited'?'A save prompt is already open.':'Could not save the file here. Use Copy instead.'); }
+}
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); toast('Copied'); }
+  catch{ const pre=$('#recordPre'); if (pre){ const r=document.createRange(); r.selectNodeContents(pre); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Selected. Press Ctrl+C or ⌘C to copy.'); } }
+}
+
+/* ---------- render ---------- */
+function renderAll(){
+  renderHeader(); renderSummary(); renderSetup(); renderTable(); renderSeatCard(); renderTranscript(); renderControls();
+  renderLanding(); renderMatrix(); renderLists(); renderRecord();
+}
+function renderHeader(){
+  $('#modeDemo').setAttribute('aria-pressed', S.mode==='demo'); $('#modeLive').setAttribute('aria-pressed', S.mode==='live');
+  $('#modeLabel').textContent = S.mode==='demo' ? 'Scripted demo · example content' : 'Live session';
+  $('#qText').textContent = S.question || (S.mode==='live' ? 'Start a live session below' : '');
+  const meta = $('#qMeta'); meta.replaceChildren(
+    h('span',{class:'chip'},S.decisionType==='deliberative'?'Informs a decision':'Records a decision'),
+    h('span',{class:'chip'},`${S.horizon}-month horizon`),
+    h('span',{class:'chip'},'Review ',h('b',{},S.reviewDate)),
+    h('span',{class:'chip'},S.questionConfirmed?'Question confirmed':'Question not yet confirmed')
+  );
+  const idx = STAGES.findIndex(x=>x[0]===S.stage);
+  $('#stepper').replaceChildren(...STAGES.map(([k,l],i)=>h('li',{class:i<idx?'done':i===idx?'now':'', 'aria-current':i===idx?'step':null},h('span',{class:'n'},i<idx?'✓':String(i)),l)));
+}
+
+const STARTERS = [
+  ['Adopt a technology','We are deciding whether departments should use ___ for ___.'],
+  ['Change a rule or fee','We are deciding whether to change ___ so that ___.'],
+  ['Fund or cut a program','We are deciding whether to fund, expand or cut ___, given ___.'],
+  ['Respond to an incident','After ___ happened, we need to decide how to respond.'],
+  ['Set a new policy','We need a policy on ___ for ___.']
+];
+function svg(markup){ const t=document.createElement('template'); t.innerHTML=markup.trim(); return t.content.firstChild; }
+const MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>';
+function insertStarter(t){
+  const ta=$('#liveQ'); if (!ta) return;
+  ta.value = ta.value.trim() ? ta.value.trim()+' '+t : t; S.rawQuestion=ta.value; ta.focus();
+  const i = ta.value.indexOf('___'); if (i>=0) ta.setSelectionRange(i,i+3);
+}
+function det(key, label, ...kids){ return h('details',{class:'more',open:!!UI.open[key],ontoggle:e=>{UI.open[key]=e.target.open;}},h('summary',{},label),...kids); }
+function renderSetup(){
+  const p = $('#setupPanel');
+  if (S.started){ p.hidden = true; return; }
+  p.hidden = false;
+  if (p.contains(document.activeElement) && p.dataset.sig===setupSig()) return; // don't rebuild while typing
+  p.dataset.sig = setupSig();
+  const kids = [];
+  if (S.mode==='live'){
+    kids.push(h('div',{class:'panel-head'},h('h2',{},'Start a session'),h('span',{class:'small muted'},'Describe it in a sentence or two. Claude drafts the rest and you confirm it.')));
+    kids.push(intakeBlock());
+    if (!S.live.drafted){ p.replaceChildren(...kids); return; }
+    kids.push(h('hr',{class:'rule'}));
+  } else {
+    kids.push(h('div',{class:'panel-head'},h('h2',{},'Example session'),h('span',{class:'small muted'},'A worked example with fictional internal records.')));
+  }
+  kids.push(readyBlock());
+  p.replaceChildren(...kids);
+}
+function intakeBlock(){
+  return h('div',{class:'intake'},
+    h('div',{class:'field'},h('label',{for:'liveQ',class:'bigq'},'What decision are you facing?'),
+      h('div',{class:'qwrap'},
+        h('textarea',{id:'liveQ',rows:3,oninput:e=>{S.rawQuestion=e.target.value;},placeholder:CAN_MIC?'Type, or tap the mic and say it out loud.':'e.g. Should the county let departments use AI to sort permit applications?'},S.rawQuestion),
+        CAN_MIC ? h('button',{class:'micbtn',type:'button','aria-pressed':'false','aria-label':'Speak your question',onclick:e=>toggleMic(e.currentTarget)},svg(MIC)) : null)),
+    h('div',{class:'starters'},h('span',{class:'small muted'},'Or start from:'),...STARTERS.map(([l,t])=>h('button',{class:'pill',type:'button',onclick:()=>insertStarter(t)},l))),
+    CAN_MIC
+      ? h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Speaking works too. '),'Your browser’s speech service turns it into text you can edit. Get consent before recording anyone else.'))
+      : h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Prefer to talk? '),'Use your device’s dictation in the box: the mic on a phone keyboard, Windows key + H, or Fn twice on a Mac.')),
+    det('ctx','Add background (optional): notes, prior decisions, documents',
+      h('div',{class:'steerform'},
+        h('textarea',{id:'liveCtx',rows:5,'aria-label':'Background context',oninput:e=>{S.context=e.target.value;},placeholder:'Paste notes or excerpts, or a transcript of a recorded discussion.'},S.context),
+        h('div',{class:'field'},h('label',{for:'ctxFile'},'Or add text files (.txt, .md, .csv)'),h('input',{id:'ctxFile',type:'file',accept:'.txt,.md,.csv,text/plain,text/markdown,text/csv',multiple:true,onchange:readCtxFiles})))),
+    h('div',{class:'inline3'},
+      h('div',{class:'field'},h('label',{for:'liveType'},'This session'),h('select',{id:'liveType',onchange:e=>{S.decisionType=e.target.value;renderHeader();}},h('option',{value:'deliberative',selected:S.decisionType==='deliberative'},'Informs a decision'),h('option',{value:'decisional',selected:S.decisionType==='decisional'},'Records a decision'))),
+      h('div',{class:'field'},h('label',{for:'liveHorizon'},'Look ahead'),h('select',{id:'liveHorizon',onchange:e=>{S.horizon=Number(e.target.value);S.reviewDate=addMonths(S.horizon);renderHeader();}},...[3,6,12,24].map(m=>h('option',{value:m,selected:S.horizon===m},`${m} months`)))),
+      h('button',{class:'btn primary',id:'draftBtn',onclick:draftSetup,disabled:!SAMPLE||!!S.live.busy},S.live.busy?'Drafting…':S.live.drafted?'Redraft':'Draft the session →')
+    ),
+    SAMPLE===undefined ? h('p',{class:'small muted'},'Checking for Claude access…') :
+    SAMPLE===null ? h('p',{class:'note warn'}, HOSTED ? 'Live sessions are not connected on this site. The example session still works.' : 'Live sessions need this page opened in Claude, where it runs on your own Claude account. The example session works everywhere.') :
+    h('p',{class:'small muted'}, HOSTED ? 'Runs through your organization’s Claude connection. A full session is about 25 to 30 requests.' : 'Runs on your Claude account; Claude asks once for permission. A full session is about 25 to 30 requests.')
+  );
+}
+function readyBlock(){
+  const hasAbsent = S.seats.some(s=>s.included&&s.group==='absent'), hasRed = S.seats.some(s=>s.included&&s.group==='redteam');
+  return h('div',{class:'ready'},
+    h('div',{class:'field'},h('label',{for:'sq'},S.mode==='live'?'Claude sharpened your question. Edit it if needed.':'Decision question (edit if needed)'),
+      h('textarea',{id:'sq',rows:2,oninput:e=>{S.question=e.target.value;$('#qText').textContent=S.question;}},S.question)),
+    S.mode==='live' && S.rawQuestion ? h('p',{class:'small muted'},'You said: ',S.rawQuestion) : null,
+    h('label',{class:'confirm'},h('input',{type:'checkbox',id:'sqOk',checked:S.questionConfirmed,onchange:e=>{S.questionConfirmed=e.target.checked;renderHeader();}}),'This is the question we are deciding'),
+    h('div',{class:'meta',style:'margin-top:0'},
+      h('span',{class:'chip'},h('b',{},String(S.options.length)),' options'),
+      h('span',{class:'chip'},h('b',{},String(S.risks.length)),' risks'),
+      h('span',{class:'chip'},h('b',{},String(inSeats().length)),' seats'),
+      hasAbsent?h('span',{class:'chip'},'✓ absent voice'):null, hasRed?h('span',{class:'chip'},'✓ Red Team'):null),
+    (!hasAbsent||!hasRed) ? h('p',{class:'note warn'},'Include one absent-voice seat and one Red Team seat. They guard against missing voices and easy agreement.') : null,
+    h('div',{class:'btnrow'},
+      h('button',{class:'btn primary',onclick:startTabletop},'Start the tabletop →'),
+      S.mode==='demo' ? h('button',{class:'btn',onclick:showFinished},'Skip to the results') : null),
+    det('edit','Review or edit options, risks and seats', editorGrid())
+  );
+}
+function editorGrid(){
+  const bind = (obj,key) => ev => { obj[key] = ev.target.value; };
+  const left = h('fieldset',{},
+    h('div',{class:'row2'},
+      h('div',{class:'field'},h('label',{for:'sType'},'This session'),h('select',{id:'sType',onchange:e=>{S.decisionType=e.target.value;renderHeader();}},h('option',{value:'deliberative',selected:S.decisionType==='deliberative'},'Informs a decision'),h('option',{value:'decisional',selected:S.decisionType==='decisional'},'Records a decision'))),
+      h('div',{class:'field'},h('label',{for:'sHz'},'Look ahead'),h('select',{id:'sHz',onchange:e=>{S.horizon=Number(e.target.value);S.reviewDate=addMonths(S.horizon);renderHeader();}},...[3,6,12,24].map(m=>h('option',{value:m,selected:S.horizon===m},`${m} months`))))
+    ),
+    h('legend',{class:'label',style:'margin-top:10px'},'Response options'),
+    h('div',{class:'list-ed'},...S.options.map((o,i)=>h('div',{class:'item-ed'},
+      h('span',{class:'tag'},'O'+(i+1)),
+      h('div',{class:'stack'},h('input',{type:'text',id:`opl${i}`,'aria-label':`Option ${i+1} name`,value:o.label,oninput:bind(o,'label')}),h('input',{type:'text',id:`opd${i}`,'aria-label':`Option ${i+1} description`,value:o.desc,oninput:bind(o,'desc')})),
+      h('button',{class:'x','aria-label':`Remove option ${i+1}`,onclick:()=>{S.options.splice(i,1);renderSetupForce();}},'×')))),
+    S.options.length<4 ? h('div',{},h('button',{class:'btn',onclick:()=>{S.options.push({id:'o'+(S.options.length+1),label:'',desc:''});renderSetupForce();}},'+ Add option')) : null,
+    h('legend',{class:'label',style:'margin-top:10px'},`Risks (likelihood within ${S.horizon} months)`),
+    h('div',{class:'list-ed'},...S.risks.map((r,i)=>h('div',{class:'item-ed'},
+      h('span',{class:'tag'},'R'+(i+1)),
+      h('div',{class:'stack'},h('input',{type:'text',id:`rs${i}`,'aria-label':`Risk ${i+1} short name`,value:r.short,oninput:bind(r,'short')}),h('input',{type:'text',id:`rt${i}`,'aria-label':`Risk ${i+1} event`,value:r.text,oninput:bind(r,'text')})),
+      h('button',{class:'x','aria-label':`Remove risk ${i+1}`,onclick:()=>{S.risks.splice(i,1);renderSetupForce();}},'×')))),
+    S.risks.length<5 ? h('div',{},h('button',{class:'btn',onclick:()=>{S.risks.push({id:'R'+(S.risks.length+1),short:'',text:''});renderSetupForce();}},'+ Add risk')) : null
+  );
+  const right = h('fieldset',{},
+    h('legend',{class:'label'},`Seats (${inSeats().length} included)`),
+    h('p',{class:'small muted'},'Untick to remove. Seats are roles, never real people. List 2 or 3 grounding sources per seat, one per line.'),
+    h('div',{class:'list-ed'},...S.seats.map((s,i)=>h('div',{class:'item-ed seat-ed'+(s.included?'':' off')},
+      h('input',{type:'checkbox',id:`si${i}`,'aria-label':`Include ${s.role}`,checked:s.included,onchange:e=>{s.included=e.target.checked;renderSetupForce();renderTable();}}),
+      h('div',{class:'stack'},
+        h('div',{class:'row2'},h('input',{type:'text',id:`sr${i}`,'aria-label':'Role',value:s.role,oninput:e=>{s.role=e.target.value; if(!['redteam','absent'].includes(s.group)) s.abbr=abbr(s.role); renderTable();}}),
+          h('select',{id:`sg${i}`,class:'grp','aria-label':'Group',onchange:e=>{s.group=e.target.value;renderSetupForce();renderTable();}},...Object.entries(GROUPS).map(([k,g])=>h('option',{value:k,selected:s.group===k},g.label)))),
+        h('input',{type:'text',id:`sp${i}`,'aria-label':'Perspective',value:s.perspective,oninput:bind(s,'perspective')}),
+        h('textarea',{id:`ss${i}`,rows:2,'aria-label':'Grounding sources, one per line',oninput:e=>{s.sources=e.target.value.split('\n').map(x=>x.trim()).filter(Boolean);}},s.sources.join('\n'))
+      ),
+      h('button',{class:'x','aria-label':`Remove ${s.role}`,onclick:()=>{S.seats.splice(i,1);renderSetupForce();renderTable();}},'×')))),
+    S.seats.length<12 ? h('div',{},h('button',{class:'btn',onclick:()=>{const n=S.seats.length+1;S.seats.push({id:'s'+n+'_'+Date.now()%1000,role:'',group:'internal',perspective:'',sources:[],included:true,abbr:'?'});renderSetupForce();renderTable();}},'+ Add seat')) : null
+  );
+  return h('div',{class:'setup-grid'},left,right);
+}
+function setupSig(){ return [S.mode,S.options.length,S.risks.length,S.seats.length,inSeats().length,S.live.drafted,!!S.live.busy,SAMPLE===undefined?'u':SAMPLE?'y':'n'].join('|'); }
+function readCtxFiles(e){
+  const files=[...e.target.files]; if (!files.length) return;
+  Promise.all(files.map(f=>f.text().then(t=>`--- ${f.name} ---\n${t}`))).then(parts=>{ const ta=$('#liveCtx'); ta.value = (ta.value?ta.value+'\n\n':'') + parts.join('\n\n'); S.context=ta.value; toast(`Added ${files.length} file${files.length>1?'s':''}`); });
+}
+function renderSetupForce(){ $('#setupPanel').dataset.sig=''; document.activeElement?.blur?.(); renderSetup(); renderHeader(); }
+
+function renderTable(){
+  $('#stage').hidden = !S.started;
+  const t = $('#table'); t.querySelectorAll('.seat').forEach(x=>x.remove());
+  const seats = S.stage==='setup' && !S.started ? S.seats : inSeats();
+  const n = seats.length;
+  seats.forEach((s,i)=>{
+    const a = (-90 + i*360/n) * Math.PI/180;
+    const x = 50 + 38*Math.cos(a), y = 50 + 38*Math.sin(a);
+    const round = S.stage==='r3'||S.stage==='outputs' ? 'r3' : 'r1';
+    const submitted = S.submitted[round][s.id] && !(round==='r1'&&S.revealed.r1) && !(round==='r3'&&S.revealed.r3);
+    const el = h('button',{class:`seat${S.speaking===s.id?' speaking':''}${S.selected===s.id?' selected':''}${s.included?'':' off'}`,'data-group':s.group,style:`left:${x}%;top:${y}%;--gc:${GROUPS[s.group]?.color}`,'aria-label':`${s.role}, ${GROUPS[s.group]?.label}${submitted?', estimates sealed':''}`,onclick:()=>{S.selected = S.selected===s.id?null:s.id; renderTable(); renderSeatCard();}},
+      h('span',{class:'disc'},s.abbr||abbr(s.role), submitted?h('span',{class:'check','aria-hidden':'true'},'✓'):null),
+      h('span',{class:'cap'},s.role||'New seat'));
+    t.append(el);
+  });
+  const last = S.turns[S.turns.length-1];
+  const stageName = STAGES.find(x=>x[0]===S.stage)[1];
+  $('#felt').replaceChildren(h('div',{},
+    h('div',{class:'c-stage'},stageName),
+    h('div',{class:'c-who'}, last ? speakerInfo(last.seat).name : (S.started?'':'Seats take their places')),
+    h('div',{class:'c-type'}, last ? (TYPE_LABEL[last.type]||last.type) : `${seats.length} seats`)
+  ));
+  $('#legend').replaceChildren(
+    ...Object.entries(GROUPS).map(([k,g])=>h('span',{},h('i',{class:'sw'+(k==='absent'?' dash':''),style:`--gc:${g.color}`}),g.label)),
+    h('span',{},h('i',{class:'sw',style:'--gc:var(--good);background:var(--good)'}),'Sealed estimate')
+  );
+}
+function renderSeatCard(){
+  const box = $('#seatCard'); const s = seatById(S.selected);
+  if (!s){ box.replaceChildren(h('p',{class:'small muted',style:'text-align:center'},'Select a seat to see its perspective, sources and estimates.')); return; }
+  const cur = S.current[s.id];
+  const r1 = S.est.r1[s.id];
+  const sealed = !S.revealed.r1 || (S.submitted.r3[s.id] && !S.revealed.r3);
+  const canSee = !!cur;
+  box.replaceChildren(h('div',{class:'seatcard'},
+    h('div',{class:'hd'},h('div',{},h('div',{class:'label',style:`color:${GROUPS[s.group].color}`},GROUPS[s.group].label + (s.addedMid?' · added mid-session':'')),h('h3',{style:'font-size:1.05rem'},s.role)),h('button',{class:'x','aria-label':'Close',onclick:()=>{S.selected=null;renderTable();renderSeatCard();}},'×')),
+    h('p',{class:'small'},s.perspective),
+    h('div',{},h('div',{class:'label'},'Grounding sources'),h('ul',{},...(s.sources.length?s.sources:['None listed']).map(x=>h('li',{},x)))),
+    h('div',{},h('div',{class:'label'},'Current estimates'),
+      !cur ? h('p',{class:'small muted'},'Not rated yet.') :
+      !canSee || sealed ? h('p',{class:'small muted'},'Sealed until every seat has rated.') :
+      h('div',{class:'estrow'},...S.risks.map((r,i)=>{ const d = r1 && S.est.r3[s.id] ? cur[i]-r1[i] : 0; return h('span',{class:'est',title:r.text},`${r.id} ${cur[i]}%`, d? h('span',{class:d>0?'d-up':'d-dn'},` ${d>0?'+':'−'}${Math.abs(d)}`):null); }))
+    ),
+    S.started ? h('div',{},h('button',{class:'btn',onclick:()=>{S.steerTab='challenge'; renderControls(); const sel=$('#chSeat'); if(sel){sel.value=s.id; $('#chClaim').focus();}}},'Challenge this seat')) : null
+  ));
+}
+var lastTurnCount = 0;
+function renderTranscript(){
+  const list = $('#tlist');
+  const KEY = new Set(['challenge','concession','premortem','moderator','steer','answer']);
+  const shown = UI.keyOnly ? S.turns.filter(t=>KEY.has(t.type)).length : S.turns.length;
+  $('#turnCount').textContent = S.turns.length ? (UI.keyOnly ? `${shown} of ${S.turns.length} turns` : `${S.turns.length} turns`) : '';
+  if (!S.turns.length){ list.replaceChildren(h('p',{class:'empty'},S.started?'Waiting for the first turn…':'The transcript starts when the tabletop begins.')); lastTurnCount=0; renderFoot(); return; }
+  if (S.turns.length < lastTurnCount) list.replaceChildren();
+  if (lastTurnCount===0) list.replaceChildren();
+  for (const t of S.turns.slice(lastTurnCount)){
+    if (UI.keyOnly && !KEY.has(t.type)) continue;
+    const sp = speakerInfo(t.seat);
+    const cls = t.type==='steer'?'steer':t.type;
+    list.append(h('div',{class:'turn'},
+      h('div',{class:'who'},h('span',{class:'dot',style:`--gc:${sp.color}`}),sp.name,h('span',{class:`ttype ${cls}`},TYPE_LABEL[t.type]||t.type),h('span',{class:'src',style:'margin-left:auto'},`#${t.i}`)),
+      t.disputes ? h('div',{class:'disputes'},'Disputes: “',t.disputes,'”') : null,
+      h('div',{class:'txt'},t.text),
+      t.note ? h('div',{class:'small muted'},t.note) : null,
+      t.deltas ? h('div',{class:'estrow'},...(t.deltas.length?t.deltas.map(d=>h('span',{class:'est'},`${d.id} `,h('span',{class:d.d>0?'d-up':'d-dn'},`${d.d>0?'+':'−'}${Math.abs(d.d)}`))):[h('span',{class:'est'},'No change')])) : null,
+      (t.seat==='mod') ? null : t.seat==='staff' ? h('div',{class:'src'},'Source: Staff-provided') :
+        t.source ? h('div',{class:'src'},'Source: ',t.source) : h('div',{class:'src none'},'⚑ No source: reasoning only')
+    ));
+  }
+  lastTurnCount = S.turns.length;
+  list.scrollTop = list.scrollHeight;
+  renderFoot();
+}
+function renderFoot(){
+  const f = $('#tfoot'); if (!f) return;
+  let msg = '';
+  if (S.live.busy) msg = S.live.busy;
+  else if (S.live.error) msg = `${S.live.error.msg}`;
+  else if (S.awaitingSteer) msg = 'Paused for human steering. Inject evidence, challenge a seat, add a seat or ask a question, then resume.';
+  else if (!S.started) msg = S.mode==='demo' ? 'Scripted example. Human steers you add are logged in the decision record.' : 'Live seats speak through Claude using only their listed sources.';
+  else if (S.finished && !S.queue.length) msg = 'Session complete. Outputs are below.';
+  else if (!S.playing) msg = 'Paused.';
+  else msg = S.queue.length ? 'Playing…' : 'Waiting for the next turn…';
+  f.replaceChildren(...[msg, S.live.error ? h('button',{class:'btn',style:'margin-left:10px',onclick:()=>{S.live.error=null;S.playing=true;renderAll();loop();liveRun(S.live.errorPhase||S.live.phase||'r1');}},'Retry') : null].filter(Boolean));
+  if (S.live.error) S.live.errorPhase = S.live.error.phase;
+}
+function renderControls(){
+  const c = $('#controls');
+  const tabs = [['evidence','Inject evidence'],['challenge','Challenge a seat'],['addseat','Add a seat'],['ask','Ask a question']];
+  const playCtl = h('div',{class:'btnrow'},
+    h('button',{class:'btn primary',disabled:!S.started||(S.finished&&!S.queue.length&&!S.awaitingSteer),onclick:()=>S.playing?pause():play()},S.playing?'❚❚ Pause':S.awaitingSteer?'▶ Resume':'▶ Play'),
+    h('button',{class:'btn',disabled:!S.started||!S.queue.length,onclick:()=>{pause(); releaseGate(); stepOnce();}},'Step one turn'),
+    S.mode==='demo' ? h('button',{class:'btn',disabled:!S.started||!S.queue.length,onclick:toNextPause},'Skip to next pause') : null,
+    h('button',{class:'btn',disabled:!S.started,onclick:()=>{S.speed = S.speed===1?2:S.speed===2?0.5:1; renderControls();}},`Speed ${S.speed}×`),
+    h('button',{class:'btn',onclick:restart,disabled:!S.started},'Restart')
+  );
+  const tabBar = h('div',{class:'tabs',role:'tablist','aria-label':'Steering'},...tabs.map(([k,l])=>h('button',{role:'tab','aria-selected':S.steerTab===k,onclick:()=>{S.steerTab=k;renderControls();}},l)));
+  const riskChecks = h('div',{class:'checks'},...S.risks.map((r,i)=>h('label',{},h('input',{type:'checkbox',name:'evRisk',value:i}),`${r.id} ${r.short}`)));
+  const liveNote = SAMPLE ? 'Replies are generated live with Claude.' : 'Replies need this page opened in Claude; otherwise the steer is logged for real experts.';
+  let form;
+  if (S.steerTab==='evidence') form = h('div',{class:'steerform'},
+    h('div',{class:'field'},h('label',{for:'evText'},'Evidence (marked as staff-provided)'),h('textarea',{id:'evText',rows:2,placeholder:'e.g. The vendor contract allows prompts to be used for model training.'})),
+    S.mode==='demo' || !SAMPLE ? h('div',{class:'steerform'},
+      h('div',{class:'label'},'Which risks does it bear on?'), riskChecks,
+      h('div',{class:'row2'},
+        h('div',{class:'field'},h('label',{for:'evDir'},'Direction'),h('select',{id:'evDir'},h('option',{value:'up'},'Raises likelihood'),h('option',{value:'down'},'Lowers likelihood'))),
+        h('div',{class:'field'},h('label',{for:'evSize'},'Strength'),h('select',{id:'evSize'},h('option',{value:5},'Small (5 pts)'),h('option',{value:10,selected:true},'Moderate (10 pts)'),h('option',{value:15},'Large (15 pts)')))
+      ),
+      h('p',{class:'small muted'},'The scripted demo applies the same shift to every seat. Live sessions have each seat re-rate on its own.')
+    ) : h('p',{class:'small muted'},'Each seat re-rates the risks in light of this evidence.'),
+    h('div',{class:'btnrow'},h('button',{class:'btn primary',disabled:!S.started,onclick:submitEvidence},'Inject evidence')));
+  else if (S.steerTab==='challenge') form = h('div',{class:'steerform'},
+    h('div',{class:'field'},h('label',{for:'chSeat'},'Seat'),h('select',{id:'chSeat'},...inSeats().map(s=>h('option',{value:s.id,selected:S.selected===s.id},s.role)))),
+    h('div',{class:'field'},h('label',{for:'chClaim'},'The specific claim you dispute'),h('input',{type:'text',id:'chClaim',placeholder:'Quote or paraphrase the claim'})),
+    h('div',{class:'field'},h('label',{for:'chText'},'Your challenge'),h('textarea',{id:'chText',rows:2})),
+    h('p',{class:'small muted'},liveNote),
+    h('div',{class:'btnrow'},h('button',{class:'btn primary',disabled:!S.started,onclick:submitChallenge},'Send challenge')));
+  else if (S.steerTab==='addseat') form = h('div',{class:'steerform'},
+    h('div',{class:'row2'},h('div',{class:'field'},h('label',{for:'asRole'},'Role (not a named person)'),h('input',{type:'text',id:'asRole'})),
+      h('div',{class:'field'},h('label',{for:'asGroup'},'Group'),h('select',{id:'asGroup'},...Object.entries(GROUPS).map(([k,g])=>h('option',{value:k},g.label))))),
+    h('div',{class:'field'},h('label',{for:'asPersp'},'Perspective (one sentence)'),h('input',{type:'text',id:'asPersp'})),
+    h('div',{class:'field'},h('label',{for:'asSrc'},'Grounding sources, one per line'),h('textarea',{id:'asSrc',rows:2})),
+    h('p',{class:'small muted'},liveNote),
+    h('div',{class:'btnrow'},h('button',{class:'btn primary',disabled:!S.started,onclick:submitAddSeat},'Add seat')));
+  else form = h('div',{class:'steerform'},
+    h('div',{class:'field'},h('label',{for:'qaText'},'Question for the table'),h('textarea',{id:'qaText',rows:2,placeholder:'e.g. What would change your mind about a pause?'})),
+    h('p',{class:'small muted'},`The two best-placed seats answer in character, under 50 words each, citing only their own sources. ${liveNote}`),
+    h('div',{class:'btnrow'},h('button',{class:'btn primary',disabled:!S.started,onclick:submitQuestion},'Ask')));
+  // keep typed text across rerenders
+  const keep = {}; c.querySelectorAll('input[type=text],textarea').forEach(el=>{ if(el.id) keep[el.id]=el.value; });
+  c.replaceChildren(...[h('div',{class:'label'},'Playback'), playCtl, h('div',{class:'label'},'Human steering · every steer is logged in the record'), tabBar, form,
+    !S.started ? h('p',{class:'small muted'},'Steering opens once the tabletop starts.') : null].filter(Boolean));
+  for (const [id,v] of Object.entries(keep)){ const el=document.getElementById(id); if (el && v) el.value=v; }
+}
+
+function stanceEl(v){
+  const m = {support:['●','Supports'],conditional:['◐','With conditions'],oppose:['○','Opposes']};
+  if (!m[v]) return h('span',{class:'muted'},'—');
+  return h('span',{class:`stance ${v}`},h('i',{'aria-hidden':'true'},m[v][0]),m[v][1]);
+}
+function renderLanding(){
+  const p = $('#landingPanel');
+  const head = h('div',{class:'panel-head'},h('h2',{},'Where the seats landed'),h('span',{class:'small muted'},'Support, support with conditions, or oppose, for each option'));
+  if (!Object.keys(S.landing).length){
+    p.replaceChildren(head, h('div',{class:'tscroll'},h('table',{class:'grid'},h('thead',{},h('tr',{},h('th',{},'Option'),h('th',{},'Description'))),h('tbody',{},...S.options.map(o=>h('tr',{},h('td',{},h('b',{},o.label)),h('td',{},o.desc)))))), h('p',{class:'empty'},'Stances are filled in after round 3.'));
+    return;
+  }
+  const seats = inSeats(); const lead = leadingOption();
+  p.replaceChildren(head, h('div',{class:'tscroll'},h('table',{class:'grid'},
+    h('thead',{},h('tr',{},h('th',{},'Seat'),...S.options.map(o=>h('th',{},o.label+(lead&&lead.id===o.id?' ★':''))))),
+    h('tbody',{},
+      ...seats.map(s=>h('tr',{},h('td',{},h('span',{class:'who',style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[s.group].color}`}),s.role)),...S.options.map(o=>h('td',{},stanceEl(S.landing[o.id]?.[s.id]))))),
+      h('tr',{},h('td',{},h('b',{},'Tally')),...S.options.map(o=>{const t=tally(o.id);return h('td',{class:'num small'},`${t.support} · ${t.conditional} · ${t.oppose}`);})),
+      h('tr',{},h('td',{},h('b',{},'Conditions')),...S.options.map(o=>h('td',{class:'small'},S.conditions[o.id]||'—')))
+    ))), lead ? h('p',{class:'small muted',style:'margin-top:10px'},`★ Most support. Tally is supports · with conditions · opposes. This shows where simulated seats landed; it is not a recommendation.`) : null);
+}
+function riskWatch(){
+  if (!S.revealed.r3) return [];
+  const st = statsFor(S.current);
+  const rows = st.map((x,i)=>x&&{...x,r:S.risks[i]}).filter(Boolean);
+  const top = [...rows].sort((a,b)=>b.median-a.median).slice(0,2).map(x=>({text:`${x.r.short}: seats put it at about ${x.median}% within ${S.horizon} months (range ${x.min}–${x.max}%).`}));
+  const low = rows.filter(x=>x.spread<=LOW).map(x=>({text:`Seats agreed closely on ${x.r.short.toLowerCase()} (range ${x.min}–${x.max}%). Simulated seats tend to agree, so test this with real people.`, flag:true}));
+  return [...top, ...low];
+}
+function summaryData(){
+  const lead = leadingOption(); if (!lead) return null;
+  const t = tally(lead.id);
+  const sm = S.summary || {};
+  const headline = sm.headline || `Most support went to ${lead.label}: ${t.support} seats support it and ${t.conditional} support it with conditions.`;
+  const conditions = (sm.conditions && sm.conditions.length) ? sm.conditions : (S.conditions[lead.id] ? [S.conditions[lead.id]] : []);
+  let dissent = sm.dissent;
+  if (!dissent){ const opp=inSeats().filter(s=>S.landing[lead.id]?.[s.id]==='oppose'); dissent = opp.length ? `${opp.map(s=>s.role).join(', ')} oppose ${lead.label}.` : `No seat opposes ${lead.label} outright.`; }
+  const steps = [...S.matrix.ku.filter(x=>x.next).slice(0,2), ...S.matrix.uk.filter(x=>x.next).slice(0,2), ...S.matrix.ku.filter(x=>x.next).slice(2,3)];
+  return {lead, t, headline, conditions, dissent, risks:riskWatch(), steps};
+}
+function setView(v){
+  UI.view = v;
+  $('#viewSummary').hidden = v!=='summary'; $('#viewDetail').hidden = v!=='detail';
+  $('#tabSummary').setAttribute('aria-selected', v==='summary'); $('#tabDetail').setAttribute('aria-selected', v==='detail');
+  window.scrollTo({top:0});
+}
+function showFinished(){
+  pause();
+  if (!S.started){ S.started=true; S.reviewDate=addMonths(S.horizon); S.shift=S.risks.map(()=>0); S.queue=demoScript(); }
+  releaseGate();
+  let n=0; while (S.queue.length && n<2000){ applyEvent(S.queue.shift()); n++; }
+  S.awaitingSteer=false; S.playing=false; renderAll(); setView('summary');
+}
+function renderSummary(){
+  const p = $('#summaryPanel');
+  const head = h('div',{class:'es-head'},h('span',{class:'label'},'Executive summary'),h('span',{class:'stamp'},'Informs, does not decide'));
+  const d = Object.keys(S.landing).length ? summaryData() : null;
+  if (!d){
+    const stageName = STAGES.find(x=>x[0]===S.stage)[1];
+    p.hidden = !S.started;
+    if (!S.started) return;
+    p.replaceChildren(...[head,
+      h('p',{class:'es-empty'}, S.started ? `The session is running (${stageName}). The results will appear here when it finishes: where the seats landed, what the leading option would need, the main dissent and the next steps.` : 'Results appear here when the session finishes: where the seats landed, what the leading option would need, the main dissent and the next steps.'),
+      S.mode==='demo' ? h('div',{class:'btnrow'},h('button',{class:'btn primary',onclick:showFinished},'Skip to the results')) : null].filter(Boolean));
+    return;
+  }
+  p.hidden = false;
+  const n = inSeats().length || 1;
+  const bars = h('div',{style:'display:grid;gap:12px'},
+    ...S.options.map(o=>{ const t=tally(o.id); return h('div',{class:'obar'},
+      h('div',{class:'top'},h('span',{},o.id===d.lead.id?h('b',{},o.label):o.label),h('span',{class:'num'},`${t.support} · ${t.conditional} · ${t.oppose}`)),
+      h('div',{class:'bar',role:'img','aria-label':`${o.label}: ${t.support} support, ${t.conditional} with conditions, ${t.oppose} oppose`},
+        h('span',{class:'s',style:`width:${t.support/n*100}%`}),h('span',{class:'c',style:`width:${t.conditional/n*100}%`}),h('span',{class:'o',style:`width:${t.oppose/n*100}%`}))); }),
+    h('div',{class:'keyline'},h('span',{},h('i',{style:'background:var(--good)'}),'Support'),h('span',{},h('i',{style:'background:var(--warn)'}),'With conditions'),h('span',{},h('i',{style:'background:var(--g-red)'}),'Oppose'))
+  );
+  p.replaceChildren(head,
+    h('h2',{class:'es-headline'},d.headline),
+    h('div',{class:'es-grid'},
+      h('div',{class:'es-block'},h('div',{class:'label'},`Where the ${n} seats landed`),bars),
+      h('div',{class:'es-block'},h('div',{class:'label'},`What ${d.lead.label.toLowerCase()} would need`),
+        d.conditions.length?h('ul',{},...d.conditions.map(c=>h('li',{},c))):h('p',{class:'muted'},'No conditions recorded.')),
+      h('div',{class:'es-block'},h('div',{class:'label'},'Main dissent'),h('p',{},d.dissent),
+        d.risks.length?h('div',{class:'label',style:'margin-top:8px'},'Risks to watch'):null,
+        d.risks.length?h('ul',{},...d.risks.map(r=>h('li',{},r.text, r.flag?h('span',{class:'flag',style:'margin-left:6px'},'Check'):null))):null),
+      h('div',{class:'es-block'},h('div',{class:'label'},'Before anyone decides'),
+        d.steps.length?h('ol',{},...d.steps.map(x=>h('li',{},x.next,x.where?h('span',{class:'where'},x.where):null))):h('p',{class:'muted'},'See the full detail for open questions.'))
+    ),
+    h('div',{class:'es-foot'},
+      h('span',{class:'small muted'},`${S.steers.length} human steer${S.steers.length===1?'':'s'} · ${S.verify.length} claims to verify · review on ${S.reviewDate}`),
+      h('div',{class:'btnrow'},
+        DL ? h('button',{class:'btn',onclick:()=>save(`decision-record-${new Date().toISOString().slice(0,10)}.md`, buildRecord())},'Download record') : null,
+        h('button',{class:'btn primary',onclick:()=>setView('detail')},'See full detail →')))
+  );
+}
+function renderMatrix(){
+  const q = (title,sub,list,whereLabel,extra) => h('div',{class:'quad'},
+    h('h3',{},title,h('span',{class:'count'},String(list.length))),h('div',{class:'sub'},sub),extra||null,
+    list.length ? h('div',{class:'mlist'},...list.map(x=>h('div',{class:'mi'},h('div',{class:'t'},x.text),
+      (x.where||x.next) ? h('dl',{},x.where?[h('dt',{},whereLabel),h('dd',{},x.where)]:null, x.next?[h('dt',{},'Next step'),h('dd',{class:'next'},x.next)]:null) : null)))
+      : (!extra?h('p',{class:'empty'},'Fills in as the session runs.'):null));
+  $('#matrixPanel').replaceChildren(
+    h('div',{class:'panel-head'},h('h2',{},'What we know, what we don’t, and where to look'),h('span',{class:'small muted'},'Each item names a source or place to look and a next step')),
+    h('div',{class:'matrix'},
+      q('Known knowns','Agreed on and sourced. Cite these.',S.matrix.kk,'Source'),
+      q('Known unknowns','Open questions. This is the research agenda.',S.matrix.ku,'Where to look'),
+      q('Unknown knowns','Likely known inside but not written down.',S.matrix.uk,'Who to ask'),
+      q('Unknown unknowns','Cannot be listed. Probe them with pre-mortems, pilots and incident reviews.',S.matrix.uu,'Found by',S.matrix.uu.length?null:h('p',{class:'small muted'},'Probes appear here after the Red Team’s pre-mortems.'))
+    ));
+}
+function renderLists(){
+  $('#expertPanel').replaceChildren(
+    h('div',{class:'panel-head'},h('h2',{},'Questions for real experts')),
+    S.expertQs.length?h('ol',{class:'plain'},...S.expertQs.map(x=>h('li',{},x))):h('p',{class:'empty'},'Filled at the end, plus any question you ask the table.'),
+    h('div',{class:'label',style:'margin-top:16px'},`Verification list · ${S.verify.length}`),
+    S.verify.length?h('ul',{class:'plain',style:'margin-top:6px'},...S.verify.map(x=>h('li',{},x))):h('p',{class:'empty'},'Unsourced factual claims land here.')
+  );
+  $('#consultPanel').replaceChildren(
+    h('div',{class:'panel-head'},h('h2',{},'People to consult'),h('span',{class:'small muted'},'By role')),
+    S.consult.length?h('ul',{class:'plain'},...S.consult.map(c=>h('li',{},h('b',{},c.role),h('div',{class:'small muted'},c.why)))):h('p',{class:'empty'},'Filled at the end of the session.'),
+    h('div',{class:'label',style:'margin-top:16px'},`Human steers · ${S.steers.length}`),
+    S.steers.length?h('ul',{class:'plain',style:'margin-top:6px'},...S.steers.map(s=>h('li',{},h('b',{},s.kind),` (${s.stage}): ${s.text}`))):h('p',{class:'empty'},'Every steer you make is logged here and in the record.')
+  );
+}
+function renderRecord(){
+  const md = buildRecord();
+  const p = $('#recordPanel');
+  const sig = `${DL?1:0}|${S.reviewDate}`;
+  if ($('#recordPre') && p.dataset.sig===sig){ $('#recordPre').textContent = md; return; }
+  p.dataset.sig = sig;
+  p.replaceChildren(
+    h('div',{class:'panel-head'},h('div',{style:'display:flex;gap:12px;align-items:center;flex-wrap:wrap'},h('h2',{},'Decision record'),h('span',{class:'stamp'},'Informs, does not decide')),
+      h('div',{class:'btnrow'},
+        h('label',{class:'small',for:'revDate',style:'display:inline-flex;gap:6px;align-items:center'},'Review date',h('input',{type:'date',id:'revDate',value:S.reviewDate,style:'width:auto',onchange:e=>{S.reviewDate=e.target.value;renderHeader();renderRecord();}})),
+        DL ? h('button',{class:'btn primary',onclick:()=>save(`decision-record-${new Date().toISOString().slice(0,10)}.md`, buildRecord())},'Download record (.md)') : null,
+        DL ? h('button',{class:'btn',onclick:()=>save(`tabletop-session-${new Date().toISOString().slice(0,10)}.json`, sessionJSON())},'Download session (.json)') : null,
+        h('button',{class:'btn',onclick:()=>copyText(buildRecord())},'Copy record')
+      )),
+    h('pre',{id:'recordPre'},md),
+    h('p',{class:'small muted',style:'margin-top:10px'},'The session file keeps seats, turns, estimates per round, the matrix and steers, so the record can be regenerated and estimates scored once outcomes are known.')
+  );
+}
+
+/* ---------- runtime: inside Claude, or self-hosted ---------- */
+const HOSTED = !(window.claude && window.claude.use);
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const CAN_MIC = HOSTED && !!SR && window.isSecureContext;
+async function apiJson(input, opts={}){
+  let res;
+  try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default'})}); }
+  catch{ throw {code:'upstream_error'}; }
+  if (res.status===429) throw {code:'rate_limited'};
+  if (res.status===401||res.status===403) throw {code:'not_granted'};
+  if (!res.ok) throw {code:'upstream_error'};
+  const t = String((await res.json()).text||'');
+  try{ return JSON.parse(t); }catch{}
+  const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f){ try{ return JSON.parse(f[1]); }catch{} }
+  const a = [t.indexOf('{'),t.indexOf('[')].filter(x=>x>=0); const b = Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));
+  if (a.length && b>Math.min(...a)){ try{ return JSON.parse(t.slice(Math.min(...a),b+1)); }catch{} }
+  throw {code:'invalid_json', text:t};
+}
+function blobSave({filename,data}){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'text/plain'})); a.download=filename;
+  document.body.append(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+  return Promise.resolve({status:'saved'});
+}
+let rec = null;
+function toggleMic(btn){
+  if (rec){ rec.stop(); return; }
+  const ta=$('#liveQ'); const base = ta.value.trim() ? ta.value.trim()+' ' : '';
+  rec = new SR(); rec.lang = navigator.language || 'en-US'; rec.interimResults = true; rec.continuous = true;
+  rec.onresult = e=>{ let t=''; for (const r of e.results) t += r[0].transcript; ta.value = base + t; S.rawQuestion = ta.value; };
+  rec.onerror = e=>{ if (e.error==='not-allowed' || e.error==='service-not-allowed') toast('Microphone access was blocked. Use your device dictation instead.'); };
+  rec.onend = ()=>{ rec=null; btn.setAttribute('aria-pressed','false'); btn.setAttribute('aria-label','Speak your question'); };
+  try{ rec.start(); btn.setAttribute('aria-pressed','true'); btn.setAttribute('aria-label','Stop recording'); }catch{ rec=null; }
+}
+(async()=>{
+  if (HOSTED){
+    DL = {save: blobSave};
+    SAMPLE = null;
+    if (window.TABLETOP_API){ try{ const r = await fetch(window.TABLETOP_API); if (r.ok) SAMPLE = {json: apiJson}; }catch{} }
+    renderAll(); return;
+  }
+  const [a,b] = await Promise.all([window.claude.use('sample').catch(()=>null), window.claude.use('downloads').catch(()=>null)]);
+  SAMPLE = a || null; DL = b || null; renderAll();
+})();
+setTimeout(()=>{ if (SAMPLE===undefined){ SAMPLE=null; renderAll(); } if (DL===undefined){ DL=null; renderAll(); } }, 11000);
+
+$('#tabSummary').onclick = ()=>setView('summary');
+$('#tabDetail').onclick = ()=>setView('detail');
+$('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
+$('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
+$('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
+renderAll();
+</script>
+
+</body>
+</html>
