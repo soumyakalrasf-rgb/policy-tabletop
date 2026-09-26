@@ -10,12 +10,12 @@ The tool is already published as a Claude artifact. Open it in Claude, use **Sha
 - Live sessions run on each viewer's own Claude account. Viewers need Claude access, and Claude asks each of them once for permission.
 - In-page microphone recording is blocked inside Claude, so the page points people to their device's dictation instead.
 
-## 2. Static hosting: example session only
+## 2. Static hosting (GitHub Pages, intranet, SharePoint)
 
-Upload `index.html` (this folder) to any static host: an intranet web server, SharePoint site assets, GitHub Pages, Netlify or Vercel.
+Upload the `index.html` from the GitHub Pages package to any static host.
 
-- The example session, downloads and the summary all work.
-- Live sessions show "not connected" because there is no server to call Claude.
+- The example session, summary, memo and downloads all work.
+- **Live sessions:** open Live session and paste an Anthropic API key (from console.anthropic.com) into "Connect live generation." The page then calls Anthropic directly from that browser. The key is kept in memory, or until the tab closes if you tick "Remember." Use this for your own testing only. Anyone at that browser could use the key while it's connected, so set a spend limit in the Anthropic Console. For staff use, go with option 3.
 
 ## 3. Hosted with live sessions (recommended for staff without Claude accounts)
 
