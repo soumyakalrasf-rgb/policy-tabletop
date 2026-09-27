@@ -380,7 +380,7 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
       <div class="side">
         <div class="agreebar" id="agreeBanner" role="status" hidden></div>
         <div class="transcript">
-          <div class="th"><div class="seg2" role="tablist" aria-label="Side view"><button role="tab" id="sideT" aria-selected="true">Transcript</button><button role="tab" id="sideS" aria-selected="false">Synthesis</button></div><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="true">Key exchanges only</button></span></div>
+          <div class="th"><div class="seg2" role="tablist" aria-label="Side view"><button role="tab" id="sideT" aria-selected="true">Transcript</button><button role="tab" id="sideS" aria-selected="false">Synthesis</button></div><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="false">Key exchanges only</button></span></div>
           <p class="simnote">All seats are simulated perspectives, not real people or organizations.</p>
           <div class="tlist" id="tlist" aria-live="polite"></div>
           <div class="synth" id="synth" hidden></div>
@@ -419,7 +419,7 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
 <script>
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-var UI = {view:'summary', open:{}, keyOnly:true, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
+var UI = {view:'summary', open:{}, keyOnly:false, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs||{})){
@@ -956,6 +956,47 @@ Requirements: 3 or 4 options, including a minimal or "do nothing more" option. $
   renderAll();
 }
 
+function normStance(v){
+  const x = String(v||'').toLowerCase();
+  if (!x) return null;
+  if (/oppos|against|reject|\bno\b|block/.test(x)) return 'oppose';
+  if (/condition|mixed|depend|partial|\bif\b|qualified|caveat/.test(x)) return 'conditional';
+  if (/support|\bfor\b|favou?r|\byes\b|back|endorse|agree/.test(x)) return 'support';
+  return null;
+}
+function matchSeat(k){
+  const x = String(k||'').trim().toLowerCase(); if (!x) return null;
+  return S.seats.find(s=>s.id.toLowerCase()===x) || S.seats.find(s=>s.role.toLowerCase()===x)
+    || S.seats.find(s=>x.includes(s.role.toLowerCase()) || s.role.toLowerCase().includes(x)) || null;
+}
+function matchOption(k){
+  const x = String(k||'').trim().toLowerCase(); if (!x) return null;
+  const n = x.match(/^o?(?:ption\s*)?(\d+)$/);
+  return S.options.find(o=>o.id.toLowerCase()===x) || S.options.find(o=>o.label.toLowerCase()===x)
+    || S.options.find(o=>x.includes(o.label.toLowerCase()) || o.label.toLowerCase().includes(x)) || (n ? S.options[Number(n[1])-1] : null) || null;
+}
+// Accepts {option:{seat:stance}}, {seat:{option:stance}}, or [{seat, option, stance}], with ids or names.
+function parseLanding(raw){
+  const out = {}; S.options.forEach(o=>out[o.id]={});
+  const put = (ok, sk, v) => { let o=matchOption(ok), s=matchSeat(sk); if (!o && !s){ return; } if (!o || !s){ const o2=matchOption(sk), s2=matchSeat(ok); if (o2&&s2){ o=o2; s=s2; } } const st = normStance(typeof v==='object'&&v ? (v.stance||v.position||v.view) : v); if (o && s && st) out[o.id][s.id] = st; };
+  const walk = r => {
+    if (Array.isArray(r)) r.forEach(x=>{ if (x && typeof x==='object') put(x.option??x.option_id??x.optionId, x.seat??x.seat_id??x.role, x.stance??x.position??x.view); });
+    else if (r && typeof r==='object') for (const [a,inner] of Object.entries(r)){
+      if (Array.isArray(inner)) inner.forEach(x=>put(a, x.seat??x.role??x.option, x.stance??x.position));
+      else if (inner && typeof inner==='object' && !('stance' in inner)) for (const [b,v] of Object.entries(inner)) put(a,b,v);
+    }
+  };
+  walk(raw);
+  return out;
+}
+function landingCoverage(l){ const seats=inSeats(); let n=0; for (const o of S.options) for (const s of seats) if (l[o.id]?.[s.id]) n++; return n/((S.options.length*seats.length)||1); }
+function parseAnalysis(raw){
+  const out = {};
+  if (Array.isArray(raw)) raw.forEach(x=>{ const o=matchOption(x.option??x.option_id??x.label); if (o) out[o.id]=x; });
+  else if (raw && typeof raw==='object') for (const [k,v] of Object.entries(raw)){ const o=matchOption(k); if (o && v && typeof v==='object') out[o.id]=v; }
+  for (const id of Object.keys(out)){ const v=out[id]; out[id]={cost:v.cost||'', legal:v.legal||v.legal_authority||'', timeline:v.timeline||'', capacity:v.capacity||v.implementation||v.implementation_capacity||'', exposure:v.exposure||v.political_exposure||'', worst:v.worst||v.worst_case||''}; }
+  return out;
+}
 async function liveRun(from){
   const my = S;
   S.live.error = null;
@@ -1025,19 +1066,38 @@ async function liveRun(from){
       busy('Writing outputs…');
       const seats = inSeats();
       const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","prepare":{"objections":[{"who":"seat role","what":"the objection in under 25 words"}],"case_against":"2 or 3 plain sentences: the strongest honest case against the option under test","unanswered":["up to 3 questions staff cannot answer yet"],"missing":["up to 3 people or groups missing from the room"]},"tension":[{"seat":"s1","friction":"main friction with the option under test, under 15 words","nonnegotiable":"what this seat will not give up, under 12 words"}],"discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nThe option under test is "${(targetOption()||{}).label||'the option with most support'}". List the 3 hardest objections, strongest first. Include one "tension" entry per seat. Include every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default');
-      const landing = {};
-      for (const o of S.options){ landing[o.id]={}; for (const s of seats){ const v=r.landing?.[o.id]?.[s.id]; landing[o.id][s.id] = ['support','conditional','oppose'].includes(v)?v:null; } }
+      const landing = parseLanding(r.landing || r.stances || r.positions);
+      // If the model skipped or mangled positions, ask for them in a simple one-row-per-pair format.
+      if (landingCoverage(landing) < 0.8){
+        try{
+          busy('Recording where each seat stands on each option…');
+          const st = await askJSON(`You run Policy Tabletop. Based only on the transcript, record where each seat stands on each option.\n\nOptions:\n${S.options.map(o=>`${o.id}: ${o.label}`).join('\n')}\n\nSeats:\n${seats.map(s=>`${s.id}: ${s.role}`).join('\n')}\n\nTranscript:\n${transcriptText(12000)}\n\nReturn only JSON: {"stances":[{"seat":"s1","option":"o1","stance":"support|conditional|oppose"}]} with exactly one entry for every seat and option pair (${seats.length*S.options.length} entries). Use "conditional" when a seat would accept the option only with changes.\n\n${GUARD}`,'default');
+          const more = parseLanding(st.stances || st.landing || st);
+          for (const o of S.options) for (const s of seats) if (!landing[o.id][s.id] && more[o.id][s.id]) landing[o.id][s.id] = more[o.id][s.id];
+        }catch(e){ if (e?.code==='stale') throw e; }
+        if (S!==my) throw {code:'stale'};
+      }
       // Second pass: what would move each seat on the option under test.
-      let tension = asList(r.tension).map(x=>({seat:String(x.seat||''), friction:String(x.friction||''), nonneg:String(x.nonnegotiable||x.nonneg||'')})).filter(x=>seatById(x.seat));
+      let tension = asList(r.tension).map(x=>({seat:(matchSeat(x.seat??x.role)||{}).id||'', friction:String(x.friction||''), nonneg:String(x.nonnegotiable||x.nonneg||x.non_negotiable||'')})).filter(x=>x.seat);
       try{
         const tgt = S.options.find(o=>o.id===S.preferred) || (()=>{ let best=null,bs=-1; for (const o of S.options){ const m=landing[o.id]||{}; let sc=0; for (const v of Object.values(m)) sc += v==='support'?2:v==='conditional'?1:0; if (sc>bs){bs=sc;best=o;} } return best; })();
         busy('Asking each seat what would change its mind…');
         const lv = await askJSON(`You run Policy Tabletop. The option under test is "${tgt?tgt.label:'the leading option'}".\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript:\n${transcriptText(10000)}\n\nFor each seat, name the specific evidence, legal guarantee, funding or process change that would move it to neutral or supportive on this option. If a seat already supports it, name what would make it withdraw support.\nReturn only JSON: {"levers":[{"seat":"s1","lever":"under 20 words","type":"evidence|legal|funding|process"}]}\n\n${GUARD}`,'default');
-        for (const l of asList(lv.levers)){ const id=String(l.seat||''); if (!seatById(id)) continue; let row=tension.find(x=>x.seat===id); if (!row){ row={seat:id,friction:'',nonneg:''}; tension.push(row); } row.lever=String(l.lever||''); row.type=['evidence','legal','funding','process'].includes(l.type)?l.type:'process'; }
+        for (const l of asList(lv.levers)){ const id=(matchSeat(l.seat??l.role)||{}).id; if (!id) continue; let row=tension.find(x=>x.seat===id); if (!row){ row={seat:id,friction:'',nonneg:''}; tension.push(row); } row.lever=String(l.lever||''); row.type=['evidence','legal','funding','process'].includes(l.type)?l.type:'process'; }
       }catch(e){ if (e?.code==='stale') throw e; }
       if (S!==my) throw {code:'stale'};
+      let analysis = parseAnalysis(r.analysis);
+      if (Object.keys(analysis).length < S.options.length){
+        try{
+          busy('Summarizing each option’s cost, timing and risks…');
+          const an = await askJSON(`You run Policy Tabletop. For each option below, write one short plain line for each field, based on the discussion. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\nOptions:\n${S.options.map(o=>`${o.id}: ${o.label}: ${o.desc}`).join('\n')}\n\nTranscript:\n${transcriptText(10000)}\n\nReturn only JSON: {"analysis":[{"option":"o1","cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}]} with one entry per option.\n\n${GUARD}`,'default');
+          const more = parseAnalysis(an.analysis || an);
+          for (const [k,v] of Object.entries(more)) if (!analysis[k]) analysis[k] = v;
+        }catch(e){ if (e?.code==='stale') throw e; }
+        if (S!==my) throw {code:'stale'};
+      }
       enqueue({k:'stage',to:'outputs'});
-      enqueue({k:'outputs',prepare:(r.prepare&&typeof r.prepare==='object')?r.prepare:null,tension,landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis:(r.analysis&&typeof r.analysis==='object')?r.analysis:{},summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):'',discussion:r.discussion?String(r.discussion):'',agreed:arr(r.agreed),disputed:arr(r.disputed),changed:arr(r.changed||r.changed_minds),overlooked:arr(r.overlooked)}});
+      enqueue({k:'outputs',prepare:(r.prepare&&typeof r.prepare==='object')?r.prepare:null,tension,landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis,summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):'',discussion:r.discussion?String(r.discussion):'',agreed:arr(r.agreed),disputed:arr(r.disputed),changed:arr(r.changed||r.changed_minds),overlooked:arr(r.overlooked)}});
       enqueue({k:'turn',seat:'mod',type:'moderator',text:'The brief is ready above. It informs a decision; it doesn’t make one.',source:null});
       S.live.phase='done';
     }
@@ -1413,7 +1473,7 @@ function setupSig(){ return [S.mode,S.options.length,S.risks.length,S.seats.leng
 function renderSetupForce(){ $('#setupPanel').dataset.sig=''; document.activeElement?.blur?.(); renderSetup(); renderHeader(); }
 
 function renderTable(){
-  $('#stage').hidden = !S.started || (S.finished && !S.queue.length && !UI.showStage);
+  $('#stage').hidden = !S.started;
   const t = $('#table'); t.querySelectorAll('.seat').forEach(x=>x.remove());
   const seats = S.stage==='setup' && !S.started ? S.seats : inSeats();
   const n = seats.length;
@@ -1603,6 +1663,14 @@ function stanceEl(v){
   if (!m[v]) return h('span',{class:'muted'},'—');
   return h('span',{class:`stance ${v}`},h('i',{'aria-hidden':'true'},m[v][0]),m[v][1]);
 }
+function positionsTable(){
+  const seats = inSeats(); const lead = targetOption();
+  return h('div',{class:'tscroll'},h('table',{class:'grid positions','aria-label':'Where each seat stands on each option'},
+    h('thead',{},h('tr',{},h('th',{},'Seat'),...S.options.map(o=>h('th',{},o.label+(lead&&lead.id===o.id?' ★':''))))),
+    h('tbody',{},
+      ...seats.map(s=>h('tr',{},h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[s.group].color}`}),s.role)),...S.options.map(o=>h('td',{},stanceEl(S.landing[o.id]?.[s.id]))))),
+      h('tr',{},h('td',{},h('b',{},'Total')),...S.options.map(o=>{const t=tally(o.id);return h('td',{class:'small'},`${t.support} yes · ${t.conditional} if · ${t.oppose} no`);})))));
+}
 function renderLanding(){
   const p = $('#landingPanel');
   const head = h('div',{class:'panel-head'},h('h2',{},'Where the simulated perspectives landed'),h('span',{class:'small muted'},'Not stakeholder positions. Test each with the real people.'));
@@ -1706,6 +1774,9 @@ function renderSummary(){
       block('Questions you can’t answer yet', list(prep.unanswered,'None flagged.')),
       block('Who is missing from the room', list(prep.missing,'No gaps flagged.'))),
 
+    Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Where each seat stands') : null,
+    Object.keys(S.landing).length ? positionsTable() : null,
+    Object.keys(S.landing).length ? h('p',{class:'small muted',style:'margin-top:6px'},`★ ${S.preferred?'The option you are leaning toward':'Most support'}. Simulated perspectives, not stakeholder positions.`) : null,
     rows.length ? h('h3',{class:'es-section'},`Stakeholder tension${t?` on ${lc(t.label)}`:''}`) : null,
     rows.length ? h('div',{class:'tscroll'},h('table',{class:'grid tension','aria-label':'Stakeholder tension matrix'},
       h('thead',{},h('tr',{},h('th',{},'Seat'),h('th',{},'Stance'),h('th',{},'Friction and non-negotiables'),h('th',{},'What would move them'))),
@@ -1732,7 +1803,7 @@ function renderSummary(){
 
     h('div',{class:'es-foot'},
       h('div',{class:'btnrow'},
-        h('button',{class:'btn',onclick:()=>{UI.showStage=!UI.showStage; renderTable(); if (UI.showStage) $('#stage').scrollIntoView({behavior:'smooth'}); renderSummary();}},UI.showStage?'Hide the discussion':'Show how the discussion unfolded')),
+        h('button',{class:'btn',onclick:()=>$('#stage').scrollIntoView({behavior:'smooth'})},'See the transcript and synthesis ↓')),
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
         h('button',{class:'btn primary',onclick:()=>setView('detail')},'Full detail →'))),
@@ -1817,6 +1888,7 @@ function buildMemo(){
     if (pr.objections.length){ L.push('**Hardest objections:**'); pr.objections.forEach((o,i)=>L.push(`${i+1}. ${o.who?o.who+': ':''}${o.what}`)); L.push(''); }
     if (pr.caseAgainst) L.push(`**Strongest case against ${tg?tg.label:'the leading option'}:** ${pr.caseAgainst}`,'');
     sec2('Questions we can’t answer yet', pr.unanswered); sec2('Missing from the room', pr.missing);
+    if (Object.keys(S.landing).length) L.push('## Where each seat stands (simulated)','',positionsMarkdown(),'');
     if (tensionRows().length) L.push('## Stakeholder tension','',tensionMarkdown(),'');
     if (S.stressTests.length){ L.push('## Stress tests',''); S.stressTests.forEach(x=>L.push(`- **${x.label}:** ${x.summary}`)); L.push(''); }
     if (d.risks.length){ L.push(`**Risk outlook, next ${S.horizon} months:**`); d.risks.forEach(r=>L.push(`- ${r.text}`)); L.push(''); }
@@ -1993,6 +2065,12 @@ function tensionRows(){
   const t = targetOption();
   return inSeats().map(s=>{ const r = S.tension.find(x=>x.seat===s.id) || {}; return {seat:s, stance: t ? (S.landing[t.id]?.[s.id]||'') : '', friction:r.friction||'', nonneg:r.nonneg||'', lever:r.lever||'', type:LEVER_TYPES[r.type]?r.type:(r.lever?'process':'')}; }).filter(r=>r.friction||r.lever||r.stance);
 }
+function positionsMarkdown(){
+  const W = {support:'Supports',conditional:'With conditions',oppose:'Opposes'};
+  const L = ['| Seat | '+S.options.map(o=>o.label).join(' | ')+' |', '|---|'+S.options.map(()=>'---').join('|')+'|'];
+  inSeats().forEach(s=>L.push(`| ${s.role} | ${S.options.map(o=>W[S.landing[o.id]?.[s.id]]||'—').join(' | ')} |`));
+  return L.join('\n');
+}
 function tensionMarkdown(){
   const t = targetOption();
   const L = [`Stakeholder tension${t?` on "${t.label}"`:''} (simulated perspectives)`,'','| Seat | Stance | Friction and non-negotiables | What would move them |','|---|---|---|---|'];
@@ -2127,7 +2205,7 @@ $('#sideS').onclick = ()=>setSide('synthesis');
 try{ new IntersectionObserver(([e])=>{ $('#stickyBar').classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0); }).observe($('#qText')); }catch{}
 $('#tabSummary').onclick = ()=>setView('summary');
 $('#tabDetail').onclick = ()=>setView('detail');
-$('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Key exchanges only' : 'Showing everything'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
+$('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Show everything' : 'Key exchanges only'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
 $('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
 $('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
 renderAll();
