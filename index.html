@@ -595,6 +595,13 @@ button.ocard:hover{border-color:var(--ink-3)}
   .takes{grid-template-columns:repeat(2,minmax(0,1fr))}
   .morelink{display:none}
 }
+.bottomline{border:1.5px solid var(--ink);border-radius:12px;padding:14px 18px;margin:-6px 0 18px;display:grid;gap:10px;max-width:820px}
+.bottomline dl{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 14px;align-items:baseline}
+.bottomline dt{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-radius:999px;padding:2px 10px;justify-self:start;background:var(--surface-2)}
+.bottomline dt.do{background:var(--ink);color:var(--bg)}
+.bottomline dt.watch{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
+.bottomline dd{margin:0;font-size:1rem;line-height:1.45}
+@media (max-width:560px){.bottomline dl{grid-template-columns:minmax(0,1fr);gap:4px}.bottomline dd{margin-bottom:8px}}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -1363,7 +1370,7 @@ async function liveRun(from){
       S.live.phase='out';
       busy('Writing outputs…');
       const seats = inSeats();
-      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","prepare":{"objections":[{"who":"seat role","what":"the objection in under 25 words"}],"case_against":"2 or 3 plain sentences: the strongest honest case against the option under test","unanswered":["up to 3 questions staff cannot answer yet"],"missing":["up to 3 people or groups missing from the room"]},"tension":[{"seat":"s1","friction":"main friction with the option under test, under 15 words","nonnegotiable":"what this seat will not give up, under 12 words"}],"discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nThe option under test is "${(targetOption()||{}).label||'the option with most support'}". List the 3 hardest objections, strongest first. Include one "tension" entry per seat. Include every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default',{voice:'chair'});
+      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","prepare":{"objections":[{"who":"seat role","what":"the objection in under 25 words"}],"case_against":"2 or 3 plain sentences: the strongest honest case against the option under test","unanswered":["up to 3 questions staff cannot answer yet"],"missing":["up to 3 people or groups missing from the room"]},"tension":[{"seat":"s1","friction":"main friction with the option under test, under 15 words","nonnegotiable":"what this seat will not give up, under 12 words"}],"discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"bottom_line":{"do":"one plain sentence, under 20 words: the next step this rehearsal points to, with any condition (it informs the decision, it does not make it)","watch":"one plain sentence, under 20 words: the single risk or signal to watch","call":"under 15 words: which roles to talk to before deciding (never a named person)"},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nThe option under test is "${(targetOption()||{}).label||'the option with most support'}". List the 3 hardest objections, strongest first. Include one "tension" entry per seat. Include every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default',{voice:'chair'});
       const landing = parseLanding(r.landing || r.stances || r.positions);
       let tension = asList(r.tension).map(x=>({seat:(matchSeat(x.seat??x.role)||{}).id||'', friction:String(x.friction||''), nonneg:String(x.nonnegotiable||x.nonneg||x.non_negotiable||'')})).filter(x=>x.seat);
       let analysis = parseAnalysis(r.analysis);
@@ -1391,7 +1398,7 @@ async function liveRun(from){
       if (S.chairModelOut==null) S.chairModelOut = r.__model||'';
       if (results.analysis?.v){ const an=results.analysis.v; const more = parseAnalysis(an.analysis || an); for (const [k,v] of Object.entries(more)) if (!analysis[k]) analysis[k] = v; }
       enqueue({k:'stage',to:'outputs'});
-      enqueue({k:'outputs',prepare:(r.prepare&&typeof r.prepare==='object')?r.prepare:null,tension,landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis,summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):'',discussion:r.discussion?String(r.discussion):'',agreed:arr(r.agreed),disputed:arr(r.disputed),changed:arr(r.changed||r.changed_minds),overlooked:arr(r.overlooked)}});
+      enqueue({k:'outputs',prepare:(r.prepare&&typeof r.prepare==='object')?r.prepare:null,tension,landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis,summary:{bottom:(r.bottom_line&&typeof r.bottom_line==='object')?{do:String(r.bottom_line.do||''),watch:String(r.bottom_line.watch||''),call:String(r.bottom_line.call||'')}:null,headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):'',discussion:r.discussion?String(r.discussion):'',agreed:arr(r.agreed),disputed:arr(r.disputed),changed:arr(r.changed||r.changed_minds),overlooked:arr(r.overlooked)}});
       enqueue({k:'turn',seat:'mod',type:'moderator',text:'The brief is ready above. It informs a decision; it doesn’t make one.',source:null});
       S.live.phase='done';
     }
@@ -2120,6 +2127,9 @@ function renderSummary(){
   p.replaceChildren(...[
     h('div',{class:'es-head'},h('span',{class:'label'},'Executive brief'),h('span',{class:'stamp'},'Simulated · informs, does not decide')),
     h('h2',{class:'es-headline'},d.headline),
+    (()=>{ const b = bottomLine(); const rowsB = [['Next step','do',b.do],['Watch','watch',b.watch],['Talk to','call',b.call]].filter(x=>x[2]);
+      return rowsB.length ? h('section',{class:'bottomline','aria-label':'Bottom line'},h('div',{class:'label'},'Bottom line'),
+        h('dl',{},...rowsB.flatMap(([l,k,v])=>[h('dt',{class:k},l),h('dd',{},v)]))) : null; })(),
     hasLand ? h('section',{class:'landed'},h('div',{class:'label'},'Where the seats landed'),stanceBars(),stanceKey()) : null,
     d.discussion ? h('p',{class:'es-lede'},d.discussion) : null,
     (warn.length || so) ? h('div',{class:'trust'},
@@ -2149,6 +2159,22 @@ function renderSummary(){
         h('button',{class:'btn primary',onclick:()=>exportPublic(),title:'A plain-language explanation of the options, what was weighed and the sources, for people outside the room'},'Publish the reasoning'))),
     modelLine() ? h('p',{class:'small muted',style:'margin-top:14px'},modelLine()) : null
   ].filter(Boolean));
+}
+const DEMO_BOTTOM = {do:'If you move toward a tiered review, name an owner and fund reviewers for the first year.', watch:'Staff already pasting resident emails into free AI tools; that risk is rising now.', call:'Call-center staff and the language access office, before deciding.'};
+function bottomLine(){
+  const b = S.summary?.bottom;
+  if (b && (b.do||b.watch||b.call)) return b;
+  if (S.mode==='demo') return DEMO_BOTTOM;
+  const t = targetOption(), prep = prepareData(), d = summaryData();
+  const cond = (S.summary?.conditions||[])[0] || (t && S.conditions[t.id]) || '';
+  const top = d.risks.find(x=>x.d.level==='likely') || d.risks[0];
+  const absent = inSeats().find(x=>x.group==='absent');
+  const who = asList(S.prepare?.missing).map(String)[0] || (S.consult[0]?.role) || (absent ? `${absent.role.replace(/\s*\(absent voice\)/i,'')}, who were only simulated here` : '');
+  return {
+    do: t ? `Lean toward ${lc(t.label)}${cond?`, with this condition: ${oneLine(cond,110).replace(/\.$/,'')}`:''}.` : 'No option has clear support yet. Narrow the options before deciding.',
+    watch: top ? `${top.d.r.short}, judged ${top.d.level}${S.revealed.r3 && top.d.trend!=='steady' ? ` and ${top.d.trend}` : ''}.` : '',
+    call: who ? `${oneLine(who,110).replace(/\.$/,'')}, before deciding.` : ''
+  };
 }
 function oneLine(x, max=170){ const t=String(x||'').trim(); const first = (t.match(/^.*?[.!?](\s|$)/)||[t])[0].trim(); const out = first.length>=40 ? first : t; return out.length>max ? out.slice(0,max-1).replace(/\s+\S*$/,'')+'…' : out; }
 function jumpDetail(id){ go('detail'); setTimeout(()=>{ const el=document.getElementById(id); if (el) el.scrollIntoView({behavior:'smooth',block:'start'}); },60); }
@@ -2259,6 +2285,7 @@ function buildMemo(){
   const day = new Date().toISOString().slice(0,10);
   const L = [];
   L.push('# Decision memo (staff draft)','');
+  if (d){ const b = bottomLine(); L.push('**Bottom line**  ', ...[['Next step',b.do],['Watch',b.watch],['Talk to',b.call]].filter(x=>x[1]).map(([l,v])=>`- **${l}:** ${v}`), ''); }
   L.push('**To:** [Decision-maker]  ','**From:** [Staff]  ',`**Date:** ${day}  `,`**Decision needed by:** [date]`,'');
   L.push('> Prepared with Policy Tabletop, a simulated rehearsal. No stakeholder views below were expressed by real people. This memo informs a decision; it does not make one.','');
   L.push('## Issue','',S.question||'(not set)','');
