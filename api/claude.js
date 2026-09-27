@@ -13,6 +13,8 @@
 //   TABLETOP_ECONOMY    optional, Claude only. Set to 1 to run every Claude call on the lowest-cost model.
 //   OPENROUTER_PRIVATE_MODEL optional. Models for private mode (zero data retention hosts only), separated by commas.
 //                       Default: DeepSeek V4.1 Flash, then gpt-oss-120b. Needs OpenRouter credit.
+//   OPENROUTER_VOICES   optional JSON, e.g. {"A":["deepseek/..."],"chair":["z-ai/..."]}. Model candidates for the mixed table:
+//                       seat voices A-D (different companies), "chair" (writes the brief, voices no seat) and "check" (second opinion).
 //   TABLETOP_PARALLEL   optional. How many seat turns run at once on a paid model (default 6). Free models always run one at a time.
 
 const CLAUDE = { quick: "claude-haiku-4-5-20251001", default: "claude-sonnet-5", complex: "claude-opus-5-5" };
@@ -36,6 +38,17 @@ const ECONOMY = process.env.TABLETOP_ECONOMY === "1";
 const BUDGET_MS = 240000;                 // stay under Vercel's 300-second limit (see vercel.json)
 const MAX_MODELS_PER_REQUEST = 10;
 const PRIVATE_MODELS = (process.env.OPENROUTER_PRIVATE_MODEL || "deepseek/deepseek-v4.1-flash,openai/gpt-oss-120b").split(",").map(m => m.trim()).filter(Boolean);
+// Mixed table: each voice is a different model family; the first candidate OpenRouter currently lists is used.
+const DEFAULT_VOICES = {
+  A: ["deepseek/deepseek-v4.1-flash", "deepseek/deepseek-chat-v3.1", "deepseek/deepseek-chat"],
+  B: ["qwen/qwen3.8-27b", "qwen/qwen3-235b-a22b-2507", "qwen/qwen3-32b"],
+  C: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
+  D: ["meta-llama/llama-4-maverick", "meta-llama/llama-3.3-70b-instruct"],
+  chair: ["z-ai/glm-4.6", "z-ai/glm-4.5", "moonshotai/kimi-k2"],
+  check: ["mistralai/mistral-medium-3.1", "mistralai/mistral-small-3.2-24b-instruct", "google/gemma-3-27b-it"],
+};
+let VOICE_CANDIDATES = DEFAULT_VOICES;
+try { if (process.env.OPENROUTER_VOICES) VOICE_CANDIDATES = { ...DEFAULT_VOICES, ...JSON.parse(process.env.OPENROUTER_VOICES) }; } catch {}
 const PARALLEL = Math.max(1, Math.min(12, Number(process.env.TABLETOP_PARALLEL) || 6));
 const SYSTEM = "You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value: no explanation, no markdown fences, no thinking out loud.";
 
@@ -114,7 +127,7 @@ async function hasCredit() {
 const isFree = id => id.endsWith(":free") || id === "openrouter/free";
 
 /* ---------- OpenRouter: try many free models ---------- */
-let catalog = null, catalogAt = 0;
+let catalog = null, catalogAt = 0, allIds = new Set();
 const cooldown = new Map(); // model -> time until which we skip it (kept while this server instance is warm)
 const FAMILY_ORDER = [/qwen/i, /glm/i, /gemma/i, /deepseek/i, /gpt-oss/i, /nemotron-3-(ultra|super)/i, /llama/i, /mistral|magistral/i, /kimi/i, /inkling/i];
 const SKIP = /code|coder|devstral|fin:|sante|omni|vision|-vl|guard|safety|embed|audio|image|lfm|nano|-xs-/i;
@@ -124,12 +137,24 @@ async function freeModels() {
   try {
     const r = await fetchWithTimeout("https://openrouter.ai/api/v1/models", {}, 6000);
     const j = await r.json();
+    allIds = new Set((j.data || []).map(m => String(m.id)));
     catalog = (j.data || [])
       .filter(m => String(m.id).endsWith(":free") && (m.context_length || 0) >= 32000 && !SKIP.test(m.id))
       .map(m => m.id);
     catalogAt = Date.now();
   } catch { catalog = catalog || []; }
   return catalog;
+}
+async function resolveVoices() {
+  if (PROVIDER !== "openrouter" || !configured()) return null;
+  await freeModels();
+  if (!(await hasCredit())) return null; // voices are paid models; without credit the table uses the free chain
+  const out = {}, used = new Set();
+  for (const [v, list] of Object.entries(VOICE_CANDIDATES)) {
+    const pick = (list || []).find(id => (!allIds.size || allIds.has(id)) && !used.has(id));
+    if (pick) { out[v] = pick; used.add(pick); }
+  }
+  return ["A", "B", "chair"].every(v => out[v]) ? out : null;
 }
 async function candidateModels() {
   const cat = await freeModels();
@@ -171,10 +196,11 @@ async function callOpenRouterModel(model, prompt, wantJson, ms, referer, priv) {
     return { ok: false, status: 504, detail: e?.name === "AbortError" ? "timed out" : String(e?.message || e) };
   }
 }
-async function viaPrivate(prompt, wantJson, referer, deadline) {
+async function viaPrivate(prompt, wantJson, referer, deadline, first) {
   if (!(await hasCredit())) return { failed: true, privateUnavailable: true, detail: "Private mode needs OpenRouter credit" };
   let lastDetail = "";
-  for (const model of PRIVATE_MODELS.flatMap(m => [m, m])) {
+  const list = [...(first ? [first] : []), ...PRIVATE_MODELS.filter(m => m !== first)];
+  for (const model of list.flatMap(m => [m, m])) {
     const left = deadline - Date.now();
     if (left < 8000) break;
     const out = await callOpenRouterModel(model, prompt, wantJson, Math.min(left - 3000, 60000), referer, true);
@@ -188,8 +214,8 @@ async function viaPrivate(prompt, wantJson, referer, deadline) {
   }
   return { failed: true, privateBusy: true, detail: lastDetail };
 }
-async function viaOpenRouter(prompt, wantJson, referer, deadline) {
-  const models = await candidateModels();
+async function viaOpenRouter(prompt, wantJson, referer, deadline, first) {
+  const models = [...(first ? [first] : []), ...(await candidateModels()).filter(m => m !== first)];
   const tried = [];
   let lastDetail = "", dailyCap = false;
   // A paid model gets a second try (OpenRouter can route it to another host) before falling back to free models.
@@ -244,7 +270,8 @@ export default async function handler(req, res) {
     const paidOk = PROVIDER === "openrouter" && configured() ? await hasCredit() : true;
     const freeFirst = PROVIDER === "openrouter" && (isFree(PREFERRED[0]) || !paidOk);
     const privateOk = PROVIDER === "openrouter" && configured() && paidOk;
-    return res.status(200).json({ ok: configured(), private: privateOk, passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(paidOk), parallel: freeFirst ? 1 : PARALLEL, credit: PROVIDER === "openrouter" ? (credit.known ? credit.paid : "unknown") : undefined, version: String(process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || undefined });
+    const voices = await resolveVoices().catch(() => null);
+    return res.status(200).json({ ok: configured(), private: privateOk, voices, passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(paidOk), parallel: freeFirst ? 1 : PARALLEL, credit: PROVIDER === "openrouter" ? (credit.known ? credit.paid : "unknown") : undefined, version: String(process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || undefined });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!configured()) return res.status(503).json({ error: "Server is missing an API key for the selected provider" });
@@ -257,18 +284,20 @@ export default async function handler(req, res) {
   const wantJson = body.expect !== "text";
   const deadline = Date.now() + BUDGET_MS;
   const priv = body.private === true;
+  const voices = body.voice ? await resolveVoices().catch(() => null) : null;
+  const voiceModel = voices && voices[String(body.voice)] || null;
 
   let out;
   if (priv) {
     // Private mode never falls back to free models or to Claude: better to stop than to send text somewhere that keeps it.
     if (PROVIDER !== "openrouter") return res.status(503).json({ error: "private_unavailable", detail: "Private mode is only available with OpenRouter" });
-    out = await viaPrivate(prompt, wantJson, req.headers.origin, deadline);
+    out = await viaPrivate(prompt, wantJson, req.headers.origin, deadline, voiceModel);
     if (out.failed) return res.status(503).json({ error: out.privateUnavailable ? "private_unavailable" : "private_busy", detail: out.detail });
     return res.status(200).json({ text: out.text, model: out.model || "", private: true });
   }
   const useOpenRouter = PROVIDER === "openrouter" || (PROVIDER === "mixed" && tier === "quick");
   if (useOpenRouter) {
-    out = await viaOpenRouter(prompt, wantJson, req.headers.origin, deadline);
+    out = await viaOpenRouter(prompt, wantJson, req.headers.origin, deadline, voiceModel);
     if (out.failed && process.env.ANTHROPIC_API_KEY && deadline - Date.now() > 15000) {
       const fb = await viaAnthropic(prompt, tier, wantJson, true);
       if (!fb.failed) out = { ...fb, fallback: true };

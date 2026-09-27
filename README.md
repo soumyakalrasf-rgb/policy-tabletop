@@ -33,6 +33,10 @@ Free models are shared and often busy, which makes sessions slow. The server now
 - **Inside Claude.** The Claude-hosted version runs live sessions on each viewer's own Claude plan, with no API key needed.
 - **Your organization's hosting.** `api/claude.js` is a small Node function. It can be adapted for Azure Functions, AWS Lambda or an internal server behind your organization's sign-in.
 
+## Mixed AI models
+
+Seats built on one model tend to agree with themselves. When the OpenRouter account has credit, seats are voiced by models from different companies (by default DeepSeek, Qwen, gpt-oss and Llama). The Red Team and the absent voice get families no regular seat uses. In the debate round each seat writes its own turn on its own model. A separate model (GLM) that voiced no seat writes the brief, and another (Mistral) gives a second opinion on whether the brief fairly represents the transcript. Every turn records which model voiced it, in the app and in the downloads. People can switch to "One model" on the review screen. Change the models with `OPENROUTER_VOICES`.
+
 ## Privacy
 
 - **Nothing is stored on the server.** It has no database and does not log prompts. Documents (PDF, Word, text) are converted to text inside the browser; the files are never uploaded.
