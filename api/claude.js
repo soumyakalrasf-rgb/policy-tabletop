@@ -13,13 +13,13 @@
 //   TABLETOP_ECONOMY    optional, Claude only. Set to 1 to run every Claude call on the lowest-cost model.
 
 const CLAUDE = { quick: "claude-haiku-4-5-20251001", default: "claude-sonnet-5", complex: "claude-opus-5-5" };
+// Free models, strongest first (September 2026 list). "openrouter/free" is OpenRouter's router across free models.
 const DEFAULT_PREFERRED = [
   "qwen/qwen3.8-27b:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "nvidia/nemotron-3-ultra-550b-a55b:free",
-  "openai/gpt-oss-120b:free",
+  "z-ai/glm-5.2:free",
+  "openrouter/free",
   "google/gemma-4-31b-it:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
 ];
 const PREFERRED = (process.env.OPENROUTER_MODEL ? process.env.OPENROUTER_MODEL.split(",") : DEFAULT_PREFERRED).map(m => m.trim()).filter(Boolean);
 const PROVIDER = process.env.PROVIDER || (process.env.OPENROUTER_API_KEY && !process.env.ANTHROPIC_API_KEY ? "openrouter" : "anthropic");
@@ -48,7 +48,11 @@ function configured() {
 }
 function label() {
   const lastResort = process.env.ANTHROPIC_API_KEY ? ", with Claude as a last resort" : "";
-  if (PROVIDER === "openrouter") return `free open models via OpenRouter (${PREFERRED[0]} first, then others)${lastResort}`;
+  if (PROVIDER === "openrouter") {
+    const first = PREFERRED[0];
+    const free = first.endsWith(":free") || first === "openrouter/free";
+    return free ? `free open models via OpenRouter (${first} first, then others)${lastResort}` : `${first} via OpenRouter, with free models as backup${lastResort}`;
+  }
   if (PROVIDER === "mixed") return "free open models via OpenRouter for seat turns, Claude for the main steps";
   return ECONOMY ? "Claude (economy mode)" : "Claude";
 }
@@ -88,8 +92,8 @@ export function extractJSON(raw) {
 /* ---------- OpenRouter: try many free models ---------- */
 let catalog = null, catalogAt = 0;
 const cooldown = new Map(); // model -> time until which we skip it (kept while this server instance is warm)
-const FAMILY_ORDER = [/qwen/i, /nemotron/i, /gpt-oss/i, /gemma/i, /llama/i, /deepseek/i, /glm/i, /mistral|magistral/i, /kimi/i];
-const SKIP = /code|coder|devstral|fin:|sante|omni|vision|-vl|guard|embed|audio|image/i;
+const FAMILY_ORDER = [/qwen/i, /glm/i, /gemma/i, /deepseek/i, /gpt-oss/i, /nemotron-3-(ultra|super)/i, /llama/i, /mistral|magistral/i, /kimi/i, /inkling/i];
+const SKIP = /code|coder|devstral|fin:|sante|omni|vision|-vl|guard|safety|embed|audio|image|lfm|nano|-xs-/i;
 
 async function freeModels() {
   if (catalog && Date.now() - catalogAt < 30 * 60 * 1000) return catalog;
@@ -146,7 +150,9 @@ async function viaOpenRouter(prompt, wantJson, referer, deadline) {
   for (const model of models) {
     const left = deadline - Date.now();
     if (left < 8000) break;
-    const out = await callOpenRouterModel(model, prompt, wantJson, Math.min(left - 3000, tried.length ? 60000 : 90000), referer);
+    // Paid models are fast and dependable; free ones can hang, so give each a shorter window before moving on.
+    const perTry = model.endsWith(":free") || model === "openrouter/free" ? 45000 : 90000;
+    const out = await callOpenRouterModel(model, prompt, wantJson, Math.min(left - 3000, perTry), referer);
     tried.push(model);
     if (out.ok) {
       if (!wantJson) return { text: out.text, model };
@@ -183,7 +189,9 @@ async function viaAnthropic(prompt, tier, wantJson, forceCheap) {
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "GET") {
-    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label() });
+    // parallel: how many seat turns the page may run at once. Free models get one at a time to avoid rate limits.
+    const freeFirst = PROVIDER === "openrouter" && (PREFERRED[0].endsWith(":free") || PREFERRED[0] === "openrouter/free");
+    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(), parallel: freeFirst ? 1 : 3 });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!configured()) return res.status(503).json({ error: "Server is missing an API key for the selected provider" });

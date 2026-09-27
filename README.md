@@ -18,6 +18,10 @@ This repository deploys as-is to Vercel's free Hobby plan (personal, non-commerc
 
 **Limits of free models:** OpenRouter allows 20 requests a minute on free models. It allows 50 a day on accounts that have bought less than $10 of credit (about one or two full sessions), and 1,000 a day after a one-time $10 purchase. When a free model is busy, slow or gives a reply that can't be read, the server moves to the next free model, and each request can take up to 5 minutes. If the daily limit is used up, it says so. Open models follow the tool's rules (clean structured output, cite only listed sources) less reliably than Claude, so expect some retries.
 
+### Faster and still nearly free: DeepSeek V4.1 Flash
+
+Free models are shared and often busy, which makes sessions slow. For a fast, dependable demo, set `OPENROUTER_MODEL` to `deepseek/deepseek-v4.1-flash` and add a few dollars of OpenRouter credit. It costs about $0.035 per million input tokens and $0.29 per million output tokens, roughly one cent per full session. Seat turns then run three at a time, and the free models stay as automatic backup.
+
 ### Other providers
 
 - **Claude (best quality):** set `PROVIDER` to `anthropic`, `ANTHROPIC_API_KEY` to a dedicated key with a monthly spend limit, and optionally `TABLETOP_ECONOMY` to `1`. A session costs roughly 20–30 cents in economy mode.
