@@ -12,10 +12,10 @@ This repository deploys as-is to Vercel's free Hobby plan (personal, non-commerc
    - `PROVIDER`: `openrouter`
    - `OPENROUTER_API_KEY`: your key
    - `TABLETOP_PASSCODE`: a passcode you share with your demo audience
-   - `OPENROUTER_MODEL` (optional): defaults to `qwen/qwen3.8-27b:free`. Any model ID from openrouter.ai/models works; free ones end in `:free`.
+   - `OPENROUTER_MODEL` (optional): up to three model IDs separated by commas, tried in order when one is busy. It defaults to three free models, led by `qwen/qwen3.8-27b:free`. Free ones end in `:free`; see openrouter.ai/models.
 4. Click **Deploy**. Share the site address and the passcode.
 
-**Limits of free models:** OpenRouter allows 20 requests a minute on free models. It allows 50 a day on accounts that have bought less than $10 of credit (about one or two full sessions), and 1,000 a day after a one-time $10 purchase. Open models follow the tool's rules (clean structured output, cite only listed sources) less reliably than Claude, so expect some retries.
+**Limits of free models:** OpenRouter allows 20 requests a minute on free models. It allows 50 a day on accounts that have bought less than $10 of credit (about one or two full sessions), and 1,000 a day after a one-time $10 purchase. When a free model is busy, the site waits and retries, then falls back to the next model. If the daily limit is used up, it says so. Open models follow the tool's rules (clean structured output, cite only listed sources) less reliably than Claude, so expect some retries.
 
 ### Other providers
 

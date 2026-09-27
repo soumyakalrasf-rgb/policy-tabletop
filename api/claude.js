@@ -5,7 +5,8 @@
 //                       "mixed" (OpenRouter for the many small seat turns, Claude for setup, debate and outputs).
 //                       Defaults to "openrouter" when only OPENROUTER_API_KEY is set, otherwise "anthropic".
 //   OPENROUTER_API_KEY  for "openrouter" and "mixed". Create one at openrouter.ai/keys.
-//   OPENROUTER_MODEL    optional. Defaults to qwen/qwen3.8-27b:free. Any OpenRouter model ID works.
+//   OPENROUTER_MODEL    optional. One model ID, or several separated by commas to try in order when one is busy.
+//                       Defaults to a list of free models.
 //   ANTHROPIC_API_KEY   for "anthropic" and "mixed". Use a dedicated key with a monthly spend limit.
 //   TABLETOP_PASSCODE   recommended. Live sessions need this passcode; the example session never does.
 //   TABLETOP_ECONOMY    optional, Claude only. Set to 1 to run every Claude call on the lowest-cost model.
@@ -14,7 +15,9 @@ const CLAUDE = {
   default: "claude-sonnet-5",
   complex: "claude-opus-5-5",
 };
-const OR_MODEL = process.env.OPENROUTER_MODEL || "qwen/qwen3.8-27b:free";
+const OR_MODELS = (process.env.OPENROUTER_MODEL || "qwen/qwen3.8-27b:free,nvidia/nemotron-3-super-120b-a12b:free,nvidia/nemotron-3-ultra-550b-a55b:free")
+  .split(",").map(m => m.trim()).filter(Boolean).slice(0, 3);
+const OR_MODEL = OR_MODELS[0];
 const PROVIDER = process.env.PROVIDER || (process.env.OPENROUTER_API_KEY && !process.env.ANTHROPIC_API_KEY ? "openrouter" : "anthropic");
 const MAX_PROMPT_CHARS = 60000;
 const PASS = process.env.TABLETOP_PASSCODE || "";
@@ -40,7 +43,7 @@ function route(tier) {
   return "anthropic";
 }
 function label() {
-  if (PROVIDER === "openrouter") return `${OR_MODEL} via OpenRouter`;
+  if (PROVIDER === "openrouter") return `${OR_MODEL} via OpenRouter${OR_MODELS.length > 1 ? `, with ${OR_MODELS.length - 1} free fallback model${OR_MODELS.length > 2 ? "s" : ""}` : ""}`;
   if (PROVIDER === "mixed") return `${OR_MODEL} via OpenRouter for seat turns, Claude for the main steps`;
   return ECONOMY ? "Claude (economy mode)" : "Claude";
 }
@@ -52,7 +55,7 @@ async function callAnthropic(prompt, tier) {
     headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({ model, max_tokens: ECONOMY ? 3000 : 4000, system: SYSTEM, messages: [{ role: "user", content: prompt }] }),
   });
-  if (!r.ok) return { status: r.status };
+  if (!r.ok) { const e = await r.json().catch(() => ({})); return { status: r.status, detail: String(e.error?.message || "") }; }
   const data = await r.json();
   return { text: (data.content || []).filter(b => b.type === "text").map(b => b.text).join("") };
 }
@@ -65,11 +68,12 @@ async function callOpenRouter(prompt, referer) {
       "HTTP-Referer": referer || "https://github.com/soumyakalrasf-rgb/policy-tabletop",
       "X-Title": "Policy Tabletop",
     },
-    body: JSON.stringify({ model: OR_MODEL, max_tokens: 4000, messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }] }),
+    // "models" lets OpenRouter move to the next model when one is rate-limited or down.
+    body: JSON.stringify({ models: OR_MODELS, max_tokens: 4000, messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }] }),
   });
-  if (!r.ok) return { status: r.status };
-  const data = await r.json();
-  return { text: String(data.choices?.[0]?.message?.content || "") };
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || data.error) return { status: r.ok ? 502 : r.status, detail: String(data.error?.message || data.error?.metadata?.raw || "") };
+  return { text: String(data.choices?.[0]?.message?.content || ""), model: data.model };
 }
 
 export default async function handler(req, res) {
@@ -90,7 +94,7 @@ export default async function handler(req, res) {
   const out = route(tier) === "openrouter"
     ? await callOpenRouter(prompt, req.headers.origin)
     : await callAnthropic(prompt, tier);
-  if (out.status === 429) return res.status(429).json({ error: "Rate limited" });
-  if (out.status) return res.status(502).json({ error: `Upstream error ${out.status}` });
-  return res.status(200).json({ text: out.text });
+  if (out.status === 429) return res.status(429).json({ error: "Rate limited", detail: out.detail || "" });
+  if (out.status) return res.status(502).json({ error: `Upstream error ${out.status}`, detail: out.detail || "" });
+  return res.status(200).json({ text: out.text, model: out.model || "" });
 }

@@ -642,7 +642,8 @@ const ERR = {
   cancelled:'Stopped.',
   unavailable:'Live generation is not connected. See the setup panel.',
   bad_key:'Anthropic rejected that API key. Check it and connect again.',
-  bad_pass:'The passcode was rejected. Unlock live sessions again.'
+  bad_pass:'The passcode was rejected. Unlock live sessions again.',
+  daily_cap:'The free daily limit on OpenRouter is used up (50 requests a day on accounts without credit). It resets at midnight UTC. Adding $10 of OpenRouter credit raises it to 1,000 a day.'
 };
 const errCopy = e => ERR[e?.code] || 'Claude could not finish this step. Retry when ready.';
 
@@ -837,8 +838,8 @@ async function liveRun(from){
       S.live.phase='r1';
       if (!S.live.r1Started){ S.live.r1Started=true; enqueue({k:'stage',to:'r1'}); enqueue({k:'turn',seat:'mod',type:'moderator',text:`Round 1. Each seat states a position, then rates the ${S.risks.length} risks privately. Estimates stay sealed until every seat has rated. Base rates first: seats are asked how often similar policies elsewhere had each problem, and to say so when they don't know.`,source:null}); }
       const todo = inSeats().filter(s=>!S.live.r1[s.id]);
-      for (let i=0;i<todo.length;i+=3){
-        await Promise.all(todo.slice(i,i+3).map(async s=>{
+      for (let i=0;i<todo.length;i+=BATCH()){
+        await Promise.all(todo.slice(i,i+BATCH()).map(async s=>{
           busy(`Round 1: ${s.role} is preparing a position and sealed estimates…`);
           const r = await askJSON(`You are one seat in Policy Tabletop, a rehearsal of a government policy debate.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nRound 1, independent estimates. You have not seen any other seat's position or estimates. First consider base rates: how often similar policies elsewhere had each problem. Only state a base rate if it is in your sources; otherwise say it is unknown.\n\nReturn only JSON: {"position":"your position in 2-3 sentences, first person, as the role","source_index":0,"estimates":[${S.risks.map(r=>r.id).join(', ')} as integers 0-100],"known_unknowns":[{"item":"open question (up to 2)","where":"where staff could look: a named law, standard, dataset, office or public source you are confident exists","next":"one concrete next step"}],"unknown_knowns":[{"item":"something someone inside likely knows but hasn't written down (up to 1)","who":"the role likely to know","next":"what to ask them for"}],"verify":["up to 2 factual claims you made without a source"]${QUOTE_ASK()}}\n\n${GUARD}`, 'quick');
           if (S!==my) throw {code:'stale'}; S.live.r1[s.id] = {position:String(r.position||''), source:srcFrom(s,r.source_index), est:estArr(r.estimates), ku:r.known_unknowns||[], uk:r.unknown_knowns||[], verify:r.verify||[], ...verifyQuote(r.quote)};
@@ -877,8 +878,8 @@ async function liveRun(from){
       S.live.phase='r3';
       if (!S.live.r3Started){ S.live.r3Started=true; enqueue({k:'stage',to:'r3'}); enqueue({k:'turn',seat:'mod',type:'moderator',text:'Round 3: each seat re-rates the risks and says what moved it.',source:null}); }
       const todo = inSeats().filter(s=>!S.live.r3[s.id]);
-      for (let i=0;i<todo.length;i+=3){
-        await Promise.all(todo.slice(i,i+3).map(async s=>{
+      for (let i=0;i<todo.length;i+=BATCH()){
+        await Promise.all(todo.slice(i,i+BATCH()).map(async s=>{
           busy(`Round 3: ${s.role} is re-estimating…`);
           const mine = S.current[s.id] || S.live.r1[s.id]?.est || [];
           const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText()}\n\nYour current estimates: ${mine.map((v,i)=>`${S.risks[i].id}=${v}`).join(' ')}\n\nRound 3: re-rate every risk. Move only where the debate or staff evidence gives you a reason. Say what moved you and by how much.\n\nReturn only JSON: {"text":"what moved you, under 50 words, first person","estimates":[integers 0-100 in order ${S.risks.map(r=>r.id).join(', ')}],"source_index":0}\n\n${GUARD}`,'quick');
@@ -1700,14 +1701,24 @@ function loadSession(e){
 const HOSTED = !(window.claude && window.claude.use);
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const CAN_MIC = HOSTED && !!SR && window.isSecureContext;
+const BATCH = () => HOSTED ? 1 : 3; // one request at a time on hosted copies, which often use rate-limited free models
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
 async function apiJson(input, opts={}){
-  let res;
-  try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json','x-tabletop-passcode':UI.pass},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default'})}); }
-  catch{ throw {code:'upstream_error'}; }
-  if (res.status===429) throw {code:'rate_limited'};
-  if (res.status===401||res.status===403) throw {code:'bad_pass'};
-  if (!res.ok) throw {code:'upstream_error'};
-  return parseLoose(String((await res.json()).text||''));
+  for (let attempt=0; attempt<3; attempt++){
+    let res;
+    try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json','x-tabletop-passcode':UI.pass},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default'})}); }
+    catch{ throw {code:'upstream_error'}; }
+    if (res.status===401||res.status===403) throw {code:'bad_pass'};
+    if (res.status===429 || res.status===502){
+      const j = await res.json().catch(()=>({}));
+      const detail = String(j.detail||'');
+      if (/per[- ]?day|daily|free-models-per-day/i.test(detail)) throw {code:'daily_cap'};
+      if (attempt<2){ busy(`The free model is busy. Waiting a few seconds, then trying again…`); await sleep(6000*(attempt+1)); continue; }
+      throw {code: res.status===429 ? 'rate_limited' : 'upstream_error', detail};
+    }
+    if (!res.ok) throw {code:'upstream_error'};
+    return parseLoose(String((await res.json()).text||''));
+  }
 }
 function parseLoose(t){
   try{ return JSON.parse(t); }catch{}
@@ -1717,7 +1728,7 @@ function parseLoose(t){
   throw {code:'invalid_json', text:t};
 }
 const MODELS = {quick:'claude-haiku-4-5-20251001', default:'claude-sonnet-5', complex:'claude-opus-5-5'};
-const OR_BROWSER_MODEL = 'qwen/qwen3.8-27b:free';
+const OR_BROWSER_MODELS = ['qwen/qwen3.8-27b:free','nvidia/nemotron-3-super-120b-a12b:free','nvidia/nemotron-3-ultra-550b-a55b:free'];
 async function directJson(input, opts={}){
   if (UI.keyProvider==='openrouter') return directOpenRouter(input);
   let res;
@@ -1733,7 +1744,7 @@ async function directJson(input, opts={}){
 async function directOpenRouter(input){
   let res;
   try{ res = await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${UI.apiKey}`,'X-Title':'Policy Tabletop'},
-    body:JSON.stringify({model:OR_BROWSER_MODEL,max_tokens:4000,messages:[{role:'system',content:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.'},{role:'user',content:String(input)}]})}); }
+    body:JSON.stringify({models:OR_BROWSER_MODELS,max_tokens:4000,messages:[{role:'system',content:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.'},{role:'user',content:String(input)}]})}); }
   catch{ throw {code:'upstream_error'}; }
   if (res.status===401 || res.status===403) throw {code:'bad_key'};
   if (res.status===429) throw {code:'rate_limited'};
