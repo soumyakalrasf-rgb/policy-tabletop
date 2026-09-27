@@ -540,6 +540,8 @@ button.ocard:hover{border-color:var(--ink-3)}
   .hero .herofig{max-width:220px}
   .appbar{padding-inline:16px}
 }
+.forwho{display:flex;gap:10px;align-items:flex-start;margin-top:18px;padding:10px 14px;border-left:2px solid var(--signal);background:var(--surface-2);border-radius:0 8px 8px 0;font-size:.92rem;max-width:46ch}
+.forwho .ic{width:18px;height:18px;margin-top:2px;color:var(--ink-2)}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -1531,6 +1533,7 @@ function renderHeader(){
 const STARTERS = [
   ['Adopt a technology','We are deciding whether departments should use ___ for ___.'],
   ['Change a rule or fee','We are deciding whether to change ___ so that ___.'],
+  ['Decide on a grant','We are deciding whether to fund ___ with a grant of ___ for ___, given ___.'],
   ['Fund or cut a program','We are deciding whether to fund, expand or cut ___, given ___.'],
   ['Respond to an incident','After ___ happened, we need to decide how to respond.'],
   ['Set a new policy','We need a policy on ___ for ___.']
@@ -2039,7 +2042,8 @@ function renderSummary(){
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>go('debate')},'← Transcript and synthesis')),
       h('div',{class:'btnrow'},
-        h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'))),
+        h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
+        h('button',{class:'btn primary',onclick:()=>exportPublic(),title:'A plain-language explanation of the options, what was weighed and the sources, for people outside the room'},'Publish the reasoning'))),
     h('div',{class:'reality'},
       h('span',{class:'small'},'After your real meeting: did this rehearsal surface what actually came up?'),
       h('div',{class:'btnrow'},...[['yes','Yes'],['partly','Partly'],['no','No']].map(([v,l])=>h('button',{class:'pill','aria-pressed':S.reality.answer===v,onclick:()=>setReality(v)},l)),
@@ -2093,7 +2097,8 @@ function renderRecord(){
       h('div',{class:'btnrow'},
         h('label',{class:'small',for:'revDate',style:'display:inline-flex;gap:6px;align-items:center'},'Review date',h('input',{type:'date',id:'revDate',value:S.reviewDate,style:'width:auto',onchange:e=>{S.reviewDate=e.target.value;renderHeader();renderRecord();}})))),
     h('div',{class:'btnrow',style:'margin-bottom:12px'},
-      h('button',{class:'btn primary',onclick:()=>exportMemo()},'Decision memo (.md)'),
+      h('button',{class:'btn primary',onclick:()=>exportPublic()},'Publish the reasoning (.md)'),
+      h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo (.md)'),
       DL ? h('button',{class:'btn',onclick:()=>save(`decision-record-${day}.md`, buildRecord())},'Full record (.md)') : null,
       DL ? h('button',{class:'btn',onclick:()=>save(`tabletop-session-${day}.json`, sessionJSON())},'Save session (.json)') : null,
       h('label',{class:'btn',for:'loadSession2'},'Load a saved session',h('input',{type:'file',id:'loadSession2',accept:'.json,application/json',hidden:true,onchange:loadSession})),
@@ -2136,6 +2141,39 @@ function buildMemo(){
   L.push('## Recommendation','','None yet. Staff will recommend after consulting the real people involved.','');
   L.push(`Review date for this decision: ${S.reviewDate}.`);
   return L.join('\n');
+}
+function buildPublic(){
+  const d = (S.summary || Object.keys(S.landing).length) ? summaryData() : null;
+  const prep = prepareData();
+  const day = new Date().toISOString().slice(0,10);
+  const bl = (items) => items.length ? items.map(x=>`- ${x}`) : ['- None recorded.'];
+  const srcs = uniq(S.turns.map(t=>t.source).filter(x=>x && !/staff-provided/i.test(x)));
+  const seats = inSeats();
+  const L = [];
+  L.push(`# How this decision is being weighed`,'');
+  L.push(`**The question:** ${S.question}  `,`**Status:** Under deliberation. No decision has been made.  `,`**Published:** ${day}  `,`**Next review:** ${S.reviewDate}`,'');
+  L.push('## Options on the table','',...S.options.map(o=>`- **${o.label}.** ${o.desc||''}`.trim()),'');
+  L.push('## Perspectives considered','',`The options were tested against ${seats.length} perspectives, including people most affected but rarely consulted, and a “red team” whose job was to find how each option could fail:`,'',...seats.map(s=>`- ${s.role}`),'');
+  if (d){
+    if (d.discussion) L.push('## What the discussion found','',d.discussion,'');
+    L.push('## Where there was broad agreement','',...bl(d.agreed),'');
+    L.push('## Where people disagreed','',...bl(d.disputed),'');
+  }
+  L.push('## Main objections raised','',...bl(prep.objections.map(o=>(o.who?`${o.who}: `:'')+o.what)),'');
+  L.push('## What we still don’t know','',...bl([...prep.unanswered, ...S.matrix.ku.slice(0,4).map(x=>x.text+(x.where?` (where to look: ${x.where})`:''))].slice(0,6)),'');
+  if (prep.missing.length) L.push('## Voices we still need to hear from','',...bl(prep.missing),'');
+  L.push('## Sources cited','',...bl(srcs),'');
+  L.push('## How this was produced','',
+    '- This summary comes from a structured rehearsal using AI-simulated perspectives. The perspectives are roles, not real people or organizations.',
+    '- Each perspective could cite only the sources listed above. Claims without a source were flagged as reasoning only.',
+    '- The rehearsal informs the decision. It does not make it. The accountable decision-maker is: [name and role].',
+    '- Before deciding, staff will check these points with the real people and experts involved.','');
+  return L.join('\n');
+}
+async function exportPublic(){
+  const md = buildPublic();
+  if (DL) return save(`public-reasoning-${new Date().toISOString().slice(0,10)}.md`, md);
+  copyText(md);
 }
 async function exportMemo(){
   const md = buildMemo();
@@ -2397,6 +2435,7 @@ function renderIntro(){
         h('div',{class:'label'},'Policy Tabletop'),
         h('h2',{},'Rehearse the room before you’re in it.'),
         h('p',{class:'sub'},'A table of simulated perspectives argues over your decision, so you see the objections, gaps and missing voices before the real meeting.'),
+        h('p',{class:'forwho'},icon('people'),h('span',{},h('b',{},'Built for '),'policy analysts and grant officers who have to brief a decision-maker on a hard call, often by tomorrow.')),
         h('div',{class:'btnrow'},
           h('button',{class:'btn primary',onclick:goIntroExample},'See a finished example'),
           h('button',{class:'btn',onclick:goIntroStart},'Start your own ',icon('arrow')))),
@@ -2439,7 +2478,7 @@ function renderIntro(){
         h('div',{class:'get'},h('div',{class:'gh'},icon('process'),'What would change minds'),
           h('div',{class:'rounds'},...['evidence','legal','funding','process'].map(k=>h('span',{style:'display:inline-flex;gap:5px;align-items:center'},icon(LEVER_ICON[k]),LEVER_TYPES[k]))),
           h('p',{},'The evidence, guarantee, money or process each seat needs.'))),
-      h('p',{class:'small muted'},'Plus the full transcript, a synthesis, and a decision memo you can copy.'),
+      h('p',{class:'small muted'},'Plus the full transcript, a synthesis, a decision memo, and a plain-language explanation of the reasoning you can publish.'),
       h('div',{class:'label',style:'margin-top:8px'},'Ground rules'),
       h('div',{class:'guards'},
         h('span',{},icon('sim'),'Simulated roles, never real people'),
@@ -2525,7 +2564,7 @@ function renderAppbar(){
     R = i < P.length-1 ? next(P[i+1], ()=>setBriefPage(i+1), {short:'Next'}) : next('Full detail', ()=>go('detail'), {dis:!ready, short:'Detail'});
   } else {
     L = back('Brief', ()=>go('brief')); C = h('span',{class:'where'},'Reference');
-    R = h('button',{class:'btn primary',onclick:()=>exportMemo()},'Decision memo');
+    R = h('button',{class:'btn primary',onclick:()=>exportPublic()},'Publish the reasoning');
   }
   bar.firstElementChild.replaceChildren(L, C, R);
 }
@@ -2650,7 +2689,7 @@ $('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttrib
 $('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
 $('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
 renderAll();
-{ let seen=null; try{ seen = localStorage.getItem('pt_seenIntro'); }catch{} go(seen ? 'setup' : 'welcome'); }
+go('welcome');
 document.addEventListener('keydown', e=>{
   if (e.altKey||e.ctrlKey||e.metaKey||e.defaultPrevented) return;
   if (e.target.closest('input,textarea,select,[contenteditable],.drawer')) return;
