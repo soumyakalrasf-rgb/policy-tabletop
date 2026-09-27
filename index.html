@@ -602,6 +602,12 @@ button.ocard:hover{border-color:var(--ink-3)}
 .bottomline dt.watch{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
 .bottomline dd{margin:0;font-size:1rem;line-height:1.45}
 @media (max-width:560px){.bottomline dl{grid-template-columns:minmax(0,1fr);gap:4px}.bottomline dd{margin-bottom:8px}}
+.tonepick{display:grid;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+.funstyles{display:flex;gap:6px;flex-wrap:wrap}
+.funchip{border:1px solid var(--line-2);background:transparent;border-radius:999px;padding:6px 12px;font-size:.84rem;color:var(--ink-2)}
+.funchip[aria-checked="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.funtag{font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 9px;background:var(--surface-2)}
+.seg2 button[aria-checked="true"]{background:var(--surface-2);color:var(--ink)}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -1032,6 +1038,7 @@ function applyEvidence(text, riskIdx, dir, sizes, scripted){
 /* ---------- turns, steers ---------- */
 function pushTurn(t){
   const turn = {i:S.turns.length+1, stage:S.stage, ...t};
+  if (funOn() && turn.seat!=='staff'){ turn.text = cleanPG(turn.text); if (turn.seat==='mod' && !/^\S*\p{Extended_Pictographic}/u.test(turn.text)) turn.text = `${funStyle().emoji} ${turn.text}`; }
   if (turn.seat!=='mod' && turn.seat!=='staff' && turn.source===undefined) turn.source=null;
   S.turns.push(turn);
   S.speaking = turn.seat;
@@ -1132,6 +1139,32 @@ function toNextPause(){
 
 /* ---------- live mode (Claude via the sample capability) ---------- */
 const GUARD = `Rules: You simulate a ROLE, never a real named person, and never put words in a real person's mouth. Do not invent statistics, percentages from studies, quotes, dates, or facts. You may cite only the numbered sources allowed for the seat; if a claim does not come from them, use source_index 0 (reasoning only). Write for a busy executive: plain everyday words, short sentences, no jargon, and spell out any acronym. Never mention numbers, percentages or ratings in your text; risk ratings belong only in the estimates field. Keep politically contested topics balanced.`;
+/* ---------- fun mode: same debate, funnier delivery, always PG ---------- */
+const FUN_STYLES = {
+  rap:{label:'Rap battle', emoji:'🎤', prompt:'Write your text as a short rap-battle verse (2 to 4 rhyming lines) with clean wordplay. A challenge is a diss aimed at the other seat’s argument, never at a person.'},
+  haiku:{label:'Haiku duel', emoji:'🌸', prompt:'Write your text as one haiku (5-7-5 syllables), or two at most. Vivid, precise, and still clear about where you stand.'},
+  westwing:{label:'West Wing walk-and-talk', emoji:'🏛️', prompt:'Write your text as brisk, earnest walk-and-talk dialogue in the spirit of The West Wing: idealistic, quick, a little speechy. Use original lines and no characters from the show.'},
+  veep:{label:'Veep-style chaos', emoji:'🙃', prompt:'Write your text in the spirit of Veep: dry office-politics comedy about spin, turf and self-interest, but warm enough to stay PG and never insulting. Use original lines and no characters from the show.'},
+  meme:{label:'Meme mode', emoji:'😂', prompt:'Write your text in the shape of a well-known text meme (for example "Nobody: / The budget office: …", "Expectation vs. reality", "Me explaining … to …", "This is fine"). One meme per turn, text only.'},
+  gameshow:{label:'Game show', emoji:'🎲', prompt:'Write your text as a game-show contestant: host-style drama, a dramatic pause, then a clear final answer.'},
+  surprise:{label:'Surprise me', emoji:'✨', prompt:''}
+};
+const FUN_STARTERS = [
+  ['Office pizza','Should the team order pineapple pizza for the all-staff meeting, given ___?'],
+  ['Name the snowplows','Should the city let residents name its snowplows by public vote?'],
+  ['Meeting-free Fridays','Should our office ban meetings on Fridays?'],
+  ['Office dog','Should the office allow dogs at work, given ___?']
+];
+const funOn = () => S.tone==='fun';
+const funStyle = () => FUN_STYLES[S.funStyle] || FUN_STYLES.rap;
+function styleNote(kind){
+  if (!funOn()) return '';
+  const st = funStyle();
+  if (kind==='brief') return `\n\nFUN MODE (${st.label}): the "headline" and "discussion" may be witty and nod to this style once. Every other field stays plain, specific and useful. Keep it PG.`;
+  return `\n\nFUN MODE: ${st.prompt} Still make a real, specific point about the decision from your role; the humor carries the argument, it does not replace it. Keep every JSON field and word limit. Keep it PG: no swearing (not even mild), no sexual content, no insults about real people or groups, nothing mean-spirited. Write original lines only: never quote song lyrics, poems, or TV or film scripts; you may name shows and borrow their general style.`;
+}
+const BLEEP = /\b(damn\w*|hell|crap\w*|shit\w*|f+u+c+k\w*|bitch\w*|ass|asshole\w*|bastard\w*|piss\w*|dick\w*|sexy|sex\w*)\b/gi;
+const cleanPG = t => String(t||'').replace(BLEEP,'[bleep]');
 function sessionBrief(){
   const ctx = (S.context||'').slice(0,9000);
   return [
@@ -1219,7 +1252,7 @@ Return only JSON of this shape:
  "seats":[{"role":"role name","group":"internal|external|absent|redteam","perspective":"one sentence","sources":["2 or 3 grounding sources"]}],
  "risks":[{"short":"≤4 words","text":"one event that either happens or not within the horizon"}]}
 
-Requirements: 3 or 4 options, including a minimal or "do nothing more" option. ${S.runMode==='quick'?'Exactly 6 seats':'8 to 12 seats'}, each named as a perspective (for example "Labor perspective", never the name of a real organization or person): internal perspectives (e.g. IT, security, legal, affected departments, and the budget office); external perspectives (industry, civil society, partners, other levels of government, and labor or staff unions when jobs are affected); an elected-official or political-exposure perspective when the decision is publicly visible; exactly one seat with group "absent" for the people most affected but least represented; exactly one seat with group "redteam" named "Red Team" whose job is to argue how each option fails. Exactly 5 risks. Sources must be real public documents you are confident exist (laws, standards, official guidance) or internal records named generically and marked "(internal record)", using the staff context where possible. Seats are roles, never real named people. Invent no statistics. If the topic is politically contested, spread seats across the range of views.`;
+Requirements: 3 or 4 options, including a minimal or "do nothing more" option. ${S.runMode==='quick'?'Exactly 6 seats':'8 to 12 seats'}, each named as a perspective (for example "Labor perspective", never the name of a real organization or person): internal perspectives (e.g. IT, security, legal, affected departments, and the budget office); external perspectives (industry, civil society, partners, other levels of government, and labor or staff unions when jobs are affected); an elected-official or political-exposure perspective when the decision is publicly visible; exactly one seat with group "absent" for the people most affected but least represented; exactly one seat with group "redteam" named "Red Team" whose job is to argue how each option fails. Exactly 5 risks. Sources must be real public documents you are confident exist (laws, standards, official guidance) or internal records named generically and marked "(internal record)", using the staff context where possible. Seats are roles, never real named people. Invent no statistics. If the topic is politically contested, spread seats across the range of views.${funOn()?' FUN MODE: this is a light-hearted session. Seat roles may be playful and specific (still roles, never real people), and the options can be fun, but keep them real choices. Keep everything PG.':''}`;
   try{
     const r = await askJSON(prompt,'default',{voice:'chair'});
     S.question = String(pick(r,['sharpened','question','decision_question'])||q); S.questionConfirmed = false;
@@ -1296,7 +1329,7 @@ async function liveRun(from){
       for (let i=0;i<todo.length;i+=BATCH()){
         await Promise.all(todo.slice(i,i+BATCH()).map(async s=>{
           busy(`Round 1: ${s.role} is preparing a position and sealed estimates…`);
-          const r = await askJSON(`You are one seat in Policy Tabletop, a rehearsal of a government policy debate.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nRound 1, independent estimates. You have not seen any other seat's position or estimates. First consider base rates: how often similar policies elsewhere had each problem. Only state a base rate if it is in your sources; otherwise say it is unknown.\n\nReturn only JSON: {"position":"your position in 2-3 sentences, first person, as the role","source_index":0,"estimates":[${S.risks.map(r=>r.id).join(', ')} as integers 0-100],"known_unknowns":[{"item":"open question (up to 2)","where":"where staff could look: a named law, standard, dataset, office or public source you are confident exists","next":"one concrete next step"}],"unknown_knowns":[{"item":"something someone inside likely knows but hasn't written down (up to 1)","who":"the role likely to know","next":"what to ask them for"}],"verify":["up to 2 factual claims you made without a source"]${QUOTE_ASK()}}\n\n${GUARD}`, 'quick', {voice:s.voice});
+          const r = await askJSON(`You are one seat in Policy Tabletop, a rehearsal of a government policy debate.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nRound 1, independent estimates. You have not seen any other seat's position or estimates. First consider base rates: how often similar policies elsewhere had each problem. Only state a base rate if it is in your sources; otherwise say it is unknown.\n\nReturn only JSON: {"position":"your position in 2-3 sentences, first person, as the role","source_index":0,"estimates":[${S.risks.map(r=>r.id).join(', ')} as integers 0-100],"known_unknowns":[{"item":"open question (up to 2)","where":"where staff could look: a named law, standard, dataset, office or public source you are confident exists","next":"one concrete next step"}],"unknown_knowns":[{"item":"something someone inside likely knows but hasn't written down (up to 1)","who":"the role likely to know","next":"what to ask them for"}],"verify":["up to 2 factual claims you made without a source"]${QUOTE_ASK()}}\n\n${GUARD}${styleNote()}`, 'quick', {voice:s.voice});
           if (S!==my) throw {code:'stale'}; S.live.r1[s.id] = {position:String(r.position||''), source:srcFrom(s,r.source_index), est:estArr(r.estimates), ku:r.known_unknowns||[], uk:r.unknown_knowns||[], verify:r.verify||[], model:r.__model||'', ...verifyQuote(r.quote)};
           const d = S.live.r1[s.id];
           enqueue({k:'turn',seat:s.id,type:'position',text:d.position,source:d.source,verify:d.verify,matrix:{ku:d.ku,uk:d.uk},quote:d.quote,quoteMeta:d.quoteMeta,quoteDropped:d.quoteDropped,model:d.model});
@@ -1319,7 +1352,7 @@ async function liveRun(from){
         busy('Round 2: each seat is responding to the others…');
         const turns = [];
         for (let i=0;i<seats.length;i+=BATCH()){
-          const outs = await Promise.all(seats.slice(i,i+BATCH()).map(s=>askJSON(`You are one seat in Policy Tabletop, round 2 (debate).\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nOther seats (ids and roles):\n${seats.filter(x=>x.id!==s.id).map(x=>`${x.id}: ${x.role}`).join('\n')}\n\nRound 1 positions:\n${pos1}\n\n${s.group==='redteam'?`You are the Red Team. Run a pre-mortem: "It's ${S.horizon} months later and the option with most support failed; why?" Use type "premortem".`:'Respond to the seat whose claim you most disagree with: quote the exact claim in "disputes" and name that seat in "target". If another seat genuinely persuaded you, concede instead (type "concession"). Do not agree just to be agreeable; disagree where your evidence differs.'} Stay strictly in your role and cite only your own numbered sources. Under 60 words.\n\nReturn only JSON: {"type":"challenge|concession|premortem","target":"seat id or null","disputes":"quoted claim or null","text":"...","source_index":0,"verify":"an unsourced factual claim to check, or null"${QUOTE_ASK()}}\n\n${GUARD}`,'quick',{voice:s.voice}).then(t=>({...t, seat:s.id, __m:t.__model||''}), ()=>null)));
+          const outs = await Promise.all(seats.slice(i,i+BATCH()).map(s=>askJSON(`You are one seat in Policy Tabletop, round 2 (debate).\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nOther seats (ids and roles):\n${seats.filter(x=>x.id!==s.id).map(x=>`${x.id}: ${x.role}`).join('\n')}\n\nRound 1 positions:\n${pos1}\n\n${s.group==='redteam'?`You are the Red Team. Run a pre-mortem: "It's ${S.horizon} months later and the option with most support failed; why?" Use type "premortem".`:'Respond to the seat whose claim you most disagree with: quote the exact claim in "disputes" and name that seat in "target". If another seat genuinely persuaded you, concede instead (type "concession"). Do not agree just to be agreeable; disagree where your evidence differs.'} Stay strictly in your role and cite only your own numbered sources. Under 60 words.\n\nReturn only JSON: {"type":"challenge|concession|premortem","target":"seat id or null","disputes":"quoted claim or null","text":"...","source_index":0,"verify":"an unsourced factual claim to check, or null"${QUOTE_ASK()}}\n\n${GUARD}${styleNote()}`,'quick',{voice:s.voice}).then(t=>({...t, seat:s.id, __m:t.__model||''}), ()=>null)));
           if (S!==my) throw {code:'stale'};
           turns.push(...outs.filter(Boolean));
         }
@@ -1327,10 +1360,10 @@ async function liveRun(from){
         turns.sort((x,y)=>order(x)-order(y));
         busy('Round 2: the chair is summarizing the debate…');
         let sum = {};
-        try{ sum = await askJSON(`You are the neutral chair of Policy Tabletop. You did not voice any seat.\n\n${sessionBrief()}\n\nRound 1 positions:\n${pos1}\n\nDebate turns:\n${turns.map(t=>`${(seatById(t.seat)||{}).role}: ${t.disputes?`(disputes "${t.disputes}") `:''}${t.text}`).join('\n')}\n\nReturn only JSON: {"known_knowns":[{"item":"claim agreed on and sourced","source":"the seat source it comes from","next":"how to use it"}],"known_unknowns":[{"item":"open question","where":"where to look (real public sources, offices or datasets only)","next":"concrete next step"}],"unknown_knowns":[{"item":"something someone internal likely knows but hasn't written down","who":"role to ask","next":"what to ask for"}],"premortem_probes":[{"item":"scenario that probes unknown unknowns","next":"how to test or guard against it"}],"camps":"2 to 4 neutral sentences summarizing the emerging camps, naming seats by role"}\n\n${GUARD}`,'default',{voice:'chair'}); }catch(e){ if (e?.code==='stale') throw e; }
+        try{ sum = await askJSON(`You are the neutral chair of Policy Tabletop. You did not voice any seat.\n\n${sessionBrief()}\n\nRound 1 positions:\n${pos1}\n\nDebate turns:\n${turns.map(t=>`${(seatById(t.seat)||{}).role}: ${t.disputes?`(disputes "${t.disputes}") `:''}${t.text}`).join('\n')}\n\nReturn only JSON: {"known_knowns":[{"item":"claim agreed on and sourced","source":"the seat source it comes from","next":"how to use it"}],"known_unknowns":[{"item":"open question","where":"where to look (real public sources, offices or datasets only)","next":"concrete next step"}],"unknown_knowns":[{"item":"something someone internal likely knows but hasn't written down","who":"role to ask","next":"what to ask for"}],"premortem_probes":[{"item":"scenario that probes unknown unknowns","next":"how to test or guard against it"}],"camps":"2 to 4 neutral sentences summarizing the emerging camps, naming seats by role"}\n\n${GUARD}${styleNote()}`,'default',{voice:'chair'}); }catch(e){ if (e?.code==='stale') throw e; }
         r = {...sum, turns, chairModel: sum.__model||''};
       } else {
-        r = await askJSON(`You are the neutral moderator of Policy Tabletop, round 2 (debate). You write the seats' turns, each strictly in its own role and limited to its own numbered sources.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nRound 1 positions:\n${pos1}\n\nRevealed round 1 estimates:\n${est1}\n\nWrite 8 to 12 debate turns in which seats respond to each other. Every challenge must quote the specific claim it disputes in "disputes". Include at least 2 challenges and 1 concession. ${red?`The Red Team seat (${red.id}) must run at least one pre-mortem (type "premortem"): "It's ${S.horizon} months later and [option] failed; why?", including one on the option with most support.`:''} Seats with different perspectives should disagree where their evidence differs; avoid easy consensus. Each turn under 60 words.\n\nReturn only JSON: {"turns":[{"seat":"s1","type":"challenge|concession|position|premortem","target":"id of the seat being challenged or answered, or null","disputes":"quoted claim or null","text":"...","source_index":0,"verify":"an unsourced factual claim to check, or null"${QUOTE_ASK()}}],"known_knowns":[{"item":"claim agreed on and sourced","source":"the seat source it comes from","next":"how to use it"}],"known_unknowns":[{"item":"open question","where":"where to look (real public sources, offices or datasets only)","next":"concrete next step"}],"unknown_knowns":[{"item":"something someone internal likely knows but hasn't written down","who":"role to ask","next":"what to ask for"}],"premortem_probes":[{"item":"scenario that probes unknown unknowns","next":"how to test or guard against it"}],"camps":"2 to 4 neutral sentences summarizing the emerging camps, naming seats by role"}\n\n${GUARD}`,'default',{voice:'chair'});
+        r = await askJSON(`You are the neutral moderator of Policy Tabletop, round 2 (debate). You write the seats' turns, each strictly in its own role and limited to its own numbered sources.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nRound 1 positions:\n${pos1}\n\nRevealed round 1 estimates:\n${est1}\n\nWrite 8 to 12 debate turns in which seats respond to each other. Every challenge must quote the specific claim it disputes in "disputes". Include at least 2 challenges and 1 concession. ${red?`The Red Team seat (${red.id}) must run at least one pre-mortem (type "premortem"): "It's ${S.horizon} months later and [option] failed; why?", including one on the option with most support.`:''} Seats with different perspectives should disagree where their evidence differs; avoid easy consensus. Each turn under 60 words.\n\nReturn only JSON: {"turns":[{"seat":"s1","type":"challenge|concession|position|premortem","target":"id of the seat being challenged or answered, or null","disputes":"quoted claim or null","text":"...","source_index":0,"verify":"an unsourced factual claim to check, or null"${QUOTE_ASK()}}],"known_knowns":[{"item":"claim agreed on and sourced","source":"the seat source it comes from","next":"how to use it"}],"known_unknowns":[{"item":"open question","where":"where to look (real public sources, offices or datasets only)","next":"concrete next step"}],"unknown_knowns":[{"item":"something someone internal likely knows but hasn't written down","who":"role to ask","next":"what to ask for"}],"premortem_probes":[{"item":"scenario that probes unknown unknowns","next":"how to test or guard against it"}],"camps":"2 to 4 neutral sentences summarizing the emerging camps, naming seats by role"}\n\n${GUARD}${styleNote()}`,'default',{voice:'chair'});
       }
       if (S!==my) throw {code:'stale'}; S.live.r2 = r;
       enqueue({k:'stage',to:'r2'});
@@ -1358,7 +1391,7 @@ async function liveRun(from){
         await Promise.all(todo.slice(i,i+BATCH()).map(async s=>{
           busy(`Round 3: ${s.role} is re-estimating…`);
           const mine = S.current[s.id] || S.live.r1[s.id]?.est || [];
-          const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText()}\n\nYour current estimates: ${mine.map((v,i)=>`${S.risks[i].id}=${v}`).join(' ')}\n\nRound 3: re-rate every risk. Move only where the debate or staff evidence gives you a reason. In one plain sentence, say what changed your mind, without numbers.\n\nReturn only JSON: {"text":"what moved you, under 50 words, first person","estimates":[integers 0-100 in order ${S.risks.map(r=>r.id).join(', ')}],"source_index":0}\n\n${GUARD}`,'quick',{voice:s.voice});
+          const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText()}\n\nYour current estimates: ${mine.map((v,i)=>`${S.risks[i].id}=${v}`).join(' ')}\n\nRound 3: re-rate every risk. Move only where the debate or staff evidence gives you a reason. In one plain sentence, say what changed your mind, without numbers.\n\nReturn only JSON: {"text":"what moved you, under 50 words, first person","estimates":[integers 0-100 in order ${S.risks.map(r=>r.id).join(', ')}],"source_index":0}\n\n${GUARD}${styleNote()}`,'quick',{voice:s.voice});
           if (S!==my) throw {code:'stale'}; S.live.r3[s.id] = {text:String(r.text||''), est:estArr(r.estimates), source:srcFrom(s,r.source_index), model:r.__model||''};
           enqueue({k:'r3turn',seat:s.id,text:S.live.r3[s.id].text,est:S.live.r3[s.id].est.map((v,i)=>v-(S.shift[i]||0)),source:S.live.r3[s.id].source,model:S.live.r3[s.id].model});
         }));
@@ -1370,7 +1403,7 @@ async function liveRun(from){
       S.live.phase='out';
       busy('Writing outputs…');
       const seats = inSeats();
-      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","prepare":{"objections":[{"who":"seat role","what":"the objection in under 25 words"}],"case_against":"2 or 3 plain sentences: the strongest honest case against the option under test","unanswered":["up to 3 questions staff cannot answer yet"],"missing":["up to 3 people or groups missing from the room"]},"tension":[{"seat":"s1","friction":"main friction with the option under test, under 15 words","nonnegotiable":"what this seat will not give up, under 12 words"}],"discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"bottom_line":{"do":"one plain sentence, under 20 words: the next step this rehearsal points to, with any condition (it informs the decision, it does not make it)","watch":"one plain sentence, under 20 words: the single risk or signal to watch","call":"under 15 words: which roles to talk to before deciding (never a named person)"},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nThe option under test is "${(targetOption()||{}).label||'the option with most support'}". List the 3 hardest objections, strongest first. Include one "tension" entry per seat. Include every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default',{voice:'chair'});
+      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","prepare":{"objections":[{"who":"seat role","what":"the objection in under 25 words"}],"case_against":"2 or 3 plain sentences: the strongest honest case against the option under test","unanswered":["up to 3 questions staff cannot answer yet"],"missing":["up to 3 people or groups missing from the room"]},"tension":[{"seat":"s1","friction":"main friction with the option under test, under 15 words","nonnegotiable":"what this seat will not give up, under 12 words"}],"discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"bottom_line":{"do":"one plain sentence, under 20 words: the next step this rehearsal points to, with any condition (it informs the decision, it does not make it)","watch":"one plain sentence, under 20 words: the single risk or signal to watch","call":"under 15 words: which roles to talk to before deciding (never a named person)"},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nThe option under test is "${(targetOption()||{}).label||'the option with most support'}". List the 3 hardest objections, strongest first. Include one "tension" entry per seat. Include every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}${styleNote("brief")}`,'default',{voice:'chair'});
       const landing = parseLanding(r.landing || r.stances || r.positions);
       let tension = asList(r.tension).map(x=>({seat:(matchSeat(x.seat??x.role)||{}).id||'', friction:String(x.friction||''), nonneg:String(x.nonnegotiable||x.nonneg||x.non_negotiable||'')})).filter(x=>x.seat);
       let analysis = parseAnalysis(r.analysis);
@@ -1414,20 +1447,20 @@ async function liveRun(from){
 
 /* live steering calls (used in either mode when Claude is available) */
 async function liveChallenge(seat, claim, text){
-  const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(10000)}\n\nA staff facilitator challenges you. Disputed claim: "${claim}". Challenge: ${text}\n\nRespond in character. Concede if the challenge is right, hold if your sources support you. Under 60 words.\nReturn only JSON: {"stance":"concede|hold","text":"...","source_index":0}\n\n${GUARD}`,'quick',{voice:seat.voice});
+  const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(10000)}\n\nA staff facilitator challenges you. Disputed claim: "${claim}". Challenge: ${text}\n\nRespond in character. Concede if the challenge is right, hold if your sources support you. Under 60 words.\nReturn only JSON: {"stance":"concede|hold","text":"...","source_index":0}\n\n${GUARD}${styleNote()}`,'quick',{voice:seat.voice});
   return {type: r.stance==='concede'?'concession':'position', text:String(r.text||''), source:srcFrom(seat,r.source_index), model:r.__model||''};
 }
 async function liveQuestion(q){
   const seats = inSeats();
-  const r = await askJSON(`You run Policy Tabletop. A staff facilitator asks: "${q}"\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript so far:\n${transcriptText(8000)}\n\nPick the 2 seats best placed to answer, ideally with differing views. Each answers in character, under 50 words, citing only its own numbered sources (source_index, or 0 for reasoning only).\nReturn only JSON: {"answers":[{"seat":"s1","text":"...","source_index":0}]}\n\n${GUARD}`,'quick',{voice:'chair'});
+  const r = await askJSON(`You run Policy Tabletop. A staff facilitator asks: "${q}"\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript so far:\n${transcriptText(8000)}\n\nPick the 2 seats best placed to answer, ideally with differing views. Each answers in character, under 50 words, citing only its own numbered sources (source_index, or 0 for reasoning only).\nReturn only JSON: {"answers":[{"seat":"s1","text":"...","source_index":0}]}\n\n${GUARD}${styleNote()}`,'quick',{voice:'chair'});
   return (r.answers||[]).slice(0,2).map(a=>{ const s=seatById(String(a.seat)); return s ? {seat:s.id, text:String(a.text||''), source:srcFrom(s,a.source_index), model:r.__model||''} : null; }).filter(Boolean);
 }
 async function liveSeatJoin(seat){
-  const r = await askJSON(`You are a seat joining Policy Tabletop mid-session.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(10000)}\n\nState your position in 2-3 sentences and rate every risk.\nReturn only JSON: {"position":"...","source_index":0,"estimates":[integers 0-100 in order ${S.risks.map(r=>r.id).join(', ')}]}\n\n${GUARD}`,'quick',{voice:seat.voice});
+  const r = await askJSON(`You are a seat joining Policy Tabletop mid-session.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(10000)}\n\nState your position in 2-3 sentences and rate every risk.\nReturn only JSON: {"position":"...","source_index":0,"estimates":[integers 0-100 in order ${S.risks.map(r=>r.id).join(', ')}]}\n\n${GUARD}${styleNote()}`,'quick',{voice:seat.voice});
   return {text:String(r.position||''), source:srcFrom(seat,r.source_index), est:estArr(r.estimates), model:r.__model||''};
 }
 async function liveFocus(seat){
-  const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(8000)}\n\nThe facilitator asked you to focus on: ${seat.focus}. Restate your view through that lens in under 60 words.\nReturn only JSON: {"text":"...","source_index":0}\n\n${GUARD}`,'quick',{voice:seat.voice});
+  const r = await askJSON(`You are one seat in Policy Tabletop.\n\n${seatBrief(seat)}\n\n${sessionBrief()}\n\nTranscript so far:\n${transcriptText(8000)}\n\nThe facilitator asked you to focus on: ${seat.focus}. Restate your view through that lens in under 60 words.\nReturn only JSON: {"text":"...","source_index":0}\n\n${GUARD}${styleNote()}`,'quick',{voice:seat.voice});
   return {text:String(r.text||''), source:srcFrom(seat,r.source_index)};
 }
 async function liveEvidence(text){
@@ -1446,13 +1479,14 @@ function startTabletop(){
   S.options.forEach((o,i)=>o.id='o'+(i+1)); S.risks.forEach((r,i)=>r.id='R'+(i+1));
   S.shift = S.risks.map(()=>0);
   S.started = true; S.reviewDate = addMonths(S.horizon);
+  if (funOn() && S.funStyle==='surprise'){ const ks=Object.keys(FUN_STYLES).filter(k=>k!=='surprise'); S.funStyle = ks[Math.floor(Math.random()*ks.length)]; toast(`Surprise: ${funStyle().emoji} ${funStyle().label}!`); }
   S.mixed = S.mode==='live' && mixedOn(); if (S.mixed){ assignVoices(); S.voicePlan = {...UI.voices}; }
   if (S.mode==='demo'){ S.queue = demoScript(); play(); }
   else { if (!SAMPLE){ toast(ERR.unavailable); return; } S.playing=true; renderAll(); liveRun('r1'); loop(); }
   go('debate');
 }
 function restart(){
-  const k = {rawQuestion:S.rawQuestion, question:S.question, questionConfirmed:S.questionConfirmed, decisionType:S.decisionType, horizon:S.horizon, context:S.context, contextItems:S.contextItems, runMode:S.runMode, preferred:S.preferred,
+  const k = {rawQuestion:S.rawQuestion, question:S.question, questionConfirmed:S.questionConfirmed, decisionType:S.decisionType, horizon:S.horizon, context:S.context, contextItems:S.contextItems, runMode:S.runMode, preferred:S.preferred, tone:S.tone, funStyle:S.funStyle,
     options:S.options, risks:S.risks, seats:S.seats.filter(s=>!s.addedMid)};
   const mode=S.mode, drafted=S.live.drafted;
   pause(); S = freshState(mode); Object.assign(S, k); S.live.drafted = drafted; S.shift = S.risks.map(()=>0); S.reviewDate = addMonths(S.horizon);
@@ -1625,12 +1659,13 @@ function renderHeader(){
   $('#modeDemo').setAttribute('aria-pressed', S.mode==='demo'); $('#modeLive').setAttribute('aria-pressed', S.mode==='live');
   $('#modeLabel').textContent = S.mode==='demo' ? 'Scripted demo · example content' : 'Live session';
   $('#qText').textContent = S.question || (S.mode==='live' ? 'Start a live session below' : '');
-  const meta = $('#qMeta'); meta.replaceChildren(
+  const meta = $('#qMeta'); meta.replaceChildren(...[
     h('span',{class:'chip'},S.decisionType==='deliberative'?'Informs a decision':'Records a decision'),
+    funOn() ? h('span',{class:'chip'},`${funStyle().emoji} ${funStyle().label}`) : null,
     h('span',{class:'chip'},`${S.horizon}-month horizon`),
     h('span',{class:'chip'},'Review ',h('b',{},S.reviewDate)),
     h('span',{class:'chip'},S.questionConfirmed?'Question confirmed':'Question not yet confirmed')
-  );
+  ].filter(Boolean));;
   const shown = STAGES.filter(([k])=>!(k==='r3' && S.runMode==='quick'));
   const idx = shown.findIndex(x=>x[0]===S.stage);
   $('#stepper').replaceChildren(...shown.map(([k,l],i)=>h('li',{class:i<idx?'done':i===idx?'now':'', 'aria-current':i===idx?'step':null},h('span',{class:'n'},i<idx?'✓':String(i+1)),l)));
@@ -1669,13 +1704,23 @@ function renderSetup(){
   }
   p.replaceChildren(reviewBlock());
 }
+function tonePicker(){
+  const fun = funOn();
+  return h('div',{class:'tonepick'},
+    h('div',{class:'label'},'Kind of session'),
+    h('div',{class:'seg2',role:'radiogroup','aria-label':'Kind of session'},
+      ...[['serious','Serious'],['fun','Just for fun 🎉']].map(([v,l])=>h('button',{type:'button',role:'radio','aria-checked':String((S.tone||'serious')===v),'aria-selected':String((S.tone||'serious')===v),onclick:()=>{ S.tone=v; if (v==='fun' && !S.funStyle) S.funStyle='rap'; renderSetupForce(); }},l))),
+    fun ? h('div',{class:'funstyles',role:'radiogroup','aria-label':'Style'},...Object.entries(FUN_STYLES).map(([k,st])=>h('button',{type:'button',class:'funchip',role:'radio','aria-checked':String(S.funStyle===k),onclick:()=>{ S.funStyle=k; renderSetupForce(); }},h('span',{'aria-hidden':'true'},st.emoji),' ',st.label))) : null,
+    fun ? h('p',{class:'small muted'},'Same real debate, funnier delivery. Always PG: no swearing, nothing sexual, no digs at real people, and original lines only. The brief stays plain so it’s still useful.') : null);
+}
 function intakeBlock(){
   return h('div',{class:'intake'},
+    tonePicker(),
     h('div',{class:'field'},h('label',{for:'liveQ',class:'bigq'},'What decision are you facing?'),
       h('div',{class:'qwrap'},
         h('textarea',{id:'liveQ',rows:3,oninput:e=>{S.rawQuestion=e.target.value;},placeholder:CAN_MIC?'Type, or tap the mic and say it out loud.':'e.g. Should the county let departments use AI to sort permit applications?'},S.rawQuestion),
         CAN_MIC ? h('button',{class:'micbtn',type:'button','aria-pressed':'false','aria-label':'Speak your question',onclick:e=>toggleMic(e.currentTarget)},svg(MIC)) : null)),
-    h('div',{class:'starters'},h('span',{class:'small muted'},'Or start from:'),...STARTERS.map(([l,t])=>h('button',{class:'pill',type:'button',onclick:()=>insertStarter(t)},l))),
+    h('div',{class:'starters'},h('span',{class:'small muted'},'Or start from:'),...(funOn()?FUN_STARTERS:STARTERS).map(([l,t])=>h('button',{class:'pill',type:'button',onclick:()=>insertStarter(t)},l))),
     CAN_MIC
       ? h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Speaking works too. '),'Your browser’s speech service turns it into text you can edit. Get consent before recording anyone else.'))
       : h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Prefer to talk? '),'Use your device’s dictation in the box: the mic on a phone keyboard, Windows key + H, or Fn twice on a Mac.')),
@@ -1738,7 +1783,7 @@ function reviewBlock(){
         h('div',{class:'seg2',role:'radiogroup','aria-label':'Voices'},...[['mixed','Mixed AI models'],['single','One model']].map(([v,l])=>h('button',{role:'radio','aria-selected':String(UI.mix===v),'aria-checked':String(UI.mix===v),onclick:()=>{UI.mix=v;renderSetupForce();}},l))),
         h('span',{class:'small muted'},UI.mix==='mixed'?'Seats are voiced by different companies’ models, so they don’t just agree with themselves. A separate model writes the brief and another checks it.':'Every seat uses the same model. Faster to set up, but seats tend to agree too easily.')) : null,
       (()=>{ const mix = live && mixedOn(); if (mix) assignVoices(); return h('div',{class:'seatchips'},...inSeats().map(s=>h('span',{class:'seatchip '+s.group},h('i',{style:`--gc:${GROUPS[s.group].color}`}),s.role, mix && UI.voices[s.voice] ? h('em',{class:'mtag'},modelName(UI.voices[s.voice])) : null))); })(),
-      h('div',{class:'checkrow'},h('span',{},hasAbsent?'✓ Absent voice included':'✗ No absent voice'),h('span',{},hasRed?'✓ Red Team included':'✗ No Red Team'),h('span',{},S.runMode==='quick'?'Quick brief':'Full workshop')),
+      h('div',{class:'checkrow'},h('span',{},hasAbsent?'✓ Absent voice included':'✗ No absent voice'),h('span',{},hasRed?'✓ Red Team included':'✗ No Red Team'),h('span',{},S.runMode==='quick'?'Quick brief':'Full workshop'), funOn() ? h('span',{},`${funStyle().emoji} ${funStyle().label}`) : null),
       (!hasAbsent||!hasRed) ? h('p',{class:'note warn'},'Include one absent-voice seat and one Red Team seat. They guard against missing voices and easy agreement.') : null),
     h('div',{class:'rsec'},h('div',{class:'label'},`Risks to watch · ${S.horizon} months`),
       h('div',{class:'riskchips'},...S.risks.map(r=>h('span',{},r.short)))),
@@ -2125,7 +2170,7 @@ function renderSummary(){
     text ? h('p',{},who?h('b',{},who+': '):null,oneLine(text)) : h('p',{class:'muted'},'None flagged.'),
     more(n, id));
   p.replaceChildren(...[
-    h('div',{class:'es-head'},h('span',{class:'label'},'Executive brief'),h('span',{class:'stamp'},'Simulated · informs, does not decide')),
+    h('div',{class:'es-head'},h('span',{class:'label'},'Executive brief'),h('span',{class:'stamp'},'Simulated · informs, does not decide'),funOn()?h('span',{class:'funtag'},`${funStyle().emoji} ${funStyle().label}`):null),
     h('h2',{class:'es-headline'},d.headline),
     (()=>{ const b = bottomLine(); const rowsB = [['Next step','do',b.do],['Watch','watch',b.watch],['Talk to','call',b.call]].filter(x=>x[2]);
       return rowsB.length ? h('section',{class:'bottomline','aria-label':'Bottom line'},h('div',{class:'label'},'Bottom line'),
@@ -2355,7 +2400,7 @@ function buildTranscript(){
   const seats = inSeats();
   const L = [];
   L.push('# Policy Tabletop transcript','');
-  L.push(`**Question:** ${S.question}  `,`**Date:** ${day}  `,`**Session:** ${S.mode==='demo'?'Scripted example':S.runMode==='quick'?'Quick brief':'Full workshop'}, ${S.horizon}-month horizon  `,'**Note:** Every seat is an AI-simulated perspective, not a real person or organization. This rehearsal informs a decision; it does not make one.','');
+  L.push(`**Question:** ${S.question}  `,`**Date:** ${day}  `,`**Session:** ${S.mode==='demo'?'Scripted example':S.runMode==='quick'?'Quick brief':'Full workshop'}, ${S.horizon}-month horizon${funOn()?`, fun mode (${funStyle().label})`:''}  `,'**Note:** Every seat is an AI-simulated perspective, not a real person or organization. This rehearsal informs a decision; it does not make one.','');
   L.push('## Options','',...S.options.map((o,i)=>`${i+1}. **${o.label}**${o.desc?`: ${o.desc}`:''}`),'');
   L.push('## Who was at the table','');
   if (S.mixed) L.push(`_${modelLine()}_`,'');
@@ -2616,7 +2661,7 @@ async function runConstraint(kind){
     busy(`Stress test: ${c.label}…`);
     try{
       const seats = inSeats();
-      const r = await askJSON(`You run Policy Tabletop. The facilitator adds a stress test: "${c.prompt}"${target?` The option under test is "${target.label}".`:''}\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript so far:\n${transcriptText(8000)}\n\nPick the 3 to 5 seats most affected. Each says in under 40 words how this changes its view, citing only its own numbered sources. Then write a two-sentence plain summary of how the room shifts.\nReturn only JSON: {"turns":[{"seat":"s1","text":"...","source_index":0}],"summary":"..."}\n\n${GUARD}`,'default',{voice:'chair'});
+      const r = await askJSON(`You run Policy Tabletop. The facilitator adds a stress test: "${c.prompt}"${target?` The option under test is "${target.label}".`:''}\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript so far:\n${transcriptText(8000)}\n\nPick the 3 to 5 seats most affected. Each says in under 40 words how this changes its view, citing only its own numbered sources. Then write a two-sentence plain summary of how the room shifts.\nReturn only JSON: {"turns":[{"seat":"s1","text":"...","source_index":0}],"summary":"..."}\n\n${GUARD}${styleNote()}`,'default',{voice:'chair'});
       for (const t of asList(r.turns)){ const s=seatById(String(t.seat)); if (s) pushTurn({seat:s.id, type:'position', text:String(t.text||''), source:srcFrom(s,t.source_index)}); }
       const summary = String(r.summary||'The seats reconsidered their views.');
       pushTurn({seat:'mod', type:'moderator', text:summary, source:null});
