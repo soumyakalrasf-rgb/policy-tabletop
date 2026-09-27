@@ -341,6 +341,100 @@ table.analysis tr.worst td:first-child b{color:var(--signal)}
 footer.guard{font-size:.78rem;color:var(--ink-3);display:grid;gap:6px;border-top:1px solid var(--line);padding-top:16px}
 footer.guard summary{cursor:pointer;font-weight:500;color:var(--ink-3)}
 footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
+/* intro */
+.intro{display:grid;gap:56px;padding-top:8px}
+.ic{width:22px;height:22px;flex:none}
+.ic svg{width:100%;height:100%;display:block}
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:40px;align-items:center}
+@media (max-width:760px){.hero{grid-template-columns:minmax(0,1fr)}.hero .herofig{max-width:300px;margin-inline:auto}}
+.hero h2{font-size:clamp(1.7rem,4vw,2.6rem);line-height:1.12;letter-spacing:-.025em;font-weight:700;max-width:16ch;margin-top:8px}
+.hero p.sub{font-size:1.05rem;color:var(--ink-2);max-width:46ch;margin-top:16px}
+.hero .btnrow{margin-top:24px}
+.hero .btn{padding:9px 16px;font-size:.92rem}
+.herofig svg{width:100%;height:auto;display:block}
+.isec{display:grid;gap:18px}
+.isec > .label{display:flex;gap:10px;align-items:center}
+.isec > .label::after{content:"";flex:1;border-top:1px solid var(--line)}
+.probs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.probs{grid-template-columns:minmax(0,1fr)}}
+.pcard{border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:10px;align-content:start}
+.pcard .ic{width:28px;height:28px;color:var(--signal)}
+.pcard b{font-size:.98rem}
+.pcard p{font-size:.88rem;color:var(--ink-2)}
+.answer{display:flex;gap:12px;align-items:center;font-size:1rem;font-weight:500;padding:14px 18px;border-radius:10px;background:var(--surface-2)}
+.answer .ic{color:var(--ink)}
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;list-style:none;margin:0;padding:0;counter-reset:st}
+.flow li{display:grid;gap:8px;align-content:start;justify-items:start;position:relative}
+.flow .bub{width:52px;height:52px;border-radius:50%;border:1.5px solid var(--ink);display:grid;place-items:center;background:var(--bg);position:relative;z-index:1}
+.flow li:last-child .bub{background:var(--ink);color:var(--bg)}
+.flow li:not(:last-child)::after{content:"";position:absolute;top:26px;left:60px;right:-6px;border-top:1.5px dashed var(--line-2)}
+.flow .n{font-family:var(--mono);font-size:.7rem;color:var(--ink-3)}
+.flow b{font-size:.95rem}
+.flow p{font-size:.84rem;color:var(--ink-2);line-height:1.45}
+@media (max-width:760px){.flow{grid-template-columns:minmax(0,1fr);gap:18px}.flow li{grid-template-columns:52px minmax(0,1fr);column-gap:14px;row-gap:2px}.flow .bub{grid-row:1/4}.flow li:not(:last-child)::after{top:56px;bottom:-18px;left:26px;right:auto;border-top:0;border-left:1.5px dashed var(--line-2)}}
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.modes{grid-template-columns:minmax(0,1fr)}}
+.mode{border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:12px;align-content:start}
+.mode .mh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.mode .mh b{font-size:1.02rem}
+.mode .time{font-family:var(--mono);font-size:.74rem;color:var(--ink-3)}
+.seatdots{display:flex;gap:6px;flex-wrap:wrap}
+.seatdots i{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--gc);display:inline-block}
+.seatdots i.dash{border-style:dashed}
+.rounds{display:flex;gap:6px;flex-wrap:wrap}
+.rounds > span{font-size:.74rem;border-radius:999px;padding:2px 9px;background:var(--surface-2);color:var(--ink-2)}
+.rounds > span.off{background:transparent;border:1px dashed var(--line-2);color:var(--ink-3);text-decoration:line-through}
+.mode p{font-size:.86rem;color:var(--ink-2)}
+.getgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:860px){.getgrid{grid-template-columns:minmax(0,1fr)}}
+.get{border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;align-content:start}
+.get .gh{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.92rem}
+.get p{font-size:.82rem;color:var(--ink-2)}
+.guards{display:flex;gap:10px;flex-wrap:wrap}
+.guards > span{display:inline-flex;gap:8px;align-items:center;font-size:.86rem;border:1px solid var(--line-2);border-radius:999px;padding:6px 14px 6px 10px}
+.guards .ic{width:18px;height:18px}
+.introfoot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center;padding:22px;border-radius:10px;background:var(--surface-2)}
+.introfoot b{font-size:1.05rem}
+/* visual stance pieces */
+.sbars{display:grid;gap:12px;max-width:760px}
+.sbrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr) auto;gap:14px;align-items:center;font-size:.9rem}
+@media (max-width:560px){.sbrow{grid-template-columns:minmax(0,1fr) auto}.sbrow .sbar{grid-column:1/-1;grid-row:2}}
+.sbrow .sl{font-weight:500}
+.sbrow .sl .star{color:var(--signal);margin-left:4px}
+.sbar{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--surface-2);gap:2px}
+.sbar i{display:block;height:100%}
+.sbar.sm{height:7px}
+.s-support{background:var(--ink)}
+.s-conditional{background:var(--amber)}
+.s-oppose{background:var(--signal)}
+.scount{font-family:var(--mono);font-size:.76rem;color:var(--ink-2);white-space:nowrap}
+.skey{display:flex;gap:14px;flex-wrap:wrap;font-size:.76rem;color:var(--ink-3);margin-top:10px}
+.skey > span{display:inline-flex;gap:6px;align-items:center}
+.skey i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.skey i.s-none{border:1px solid var(--line-2)}
+.chipcell{display:inline-block;width:22px;height:22px;border-radius:6px;vertical-align:middle}
+.chipcell.s-none{border:1px dashed var(--line-2)}
+table.positions td,table.positions th{text-align:center;padding-right:8px}
+table.positions td:first-child,table.positions th:first-child{text-align:left}
+table.positions th{white-space:normal;min-width:80px;max-width:140px;text-transform:none;letter-spacing:0;font-size:.76rem;color:var(--ink-2)}
+.prep{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.prep{grid-template-columns:minmax(0,1fr)}}
+.prep .pc{border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:10px;align-content:start}
+.prep .pch{display:flex;gap:10px;align-items:center}
+.prep .pch .ic{color:var(--ink-2)}
+.prep .pc.hot .pch .ic{color:var(--signal)}
+.prep .pch .label{flex:1;color:var(--ink-2)}
+.prep .cnt{font-family:var(--mono);font-size:.74rem;border-radius:999px;background:var(--surface-2);padding:1px 8px;color:var(--ink-2)}
+.prep ul,.prep ol{margin:0;padding-left:18px;display:grid;gap:6px;font-size:.9rem}
+.prep p{font-size:.9rem}
+.lever .lh{display:flex;gap:8px;align-items:center}
+.lever .lh .ic{width:18px;height:18px;color:var(--ink-2)}
+.meter{display:inline-flex;gap:2px;align-items:flex-end;vertical-align:middle;margin-right:6px}
+.meter i{width:5px;border-radius:1px;background:var(--line-2)}
+.meter i:nth-child(1){height:6px}.meter i:nth-child(2){height:10px}.meter i:nth-child(3){height:14px}
+.meter.on1 i:nth-child(-n+1),.meter.on2 i:nth-child(-n+2){background:var(--ink-2)}
+.meter.on3 i{background:var(--signal)}
+.btn .ic{width:16px;height:16px}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -364,9 +458,12 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
   </header>
 
   <nav class="viewtabs" role="tablist" aria-label="Views">
+    <button role="tab" id="tabIntro" aria-selected="false" aria-controls="viewIntro">How it works</button>
     <button role="tab" id="tabSummary" aria-selected="true" aria-controls="viewSummary">Summary</button>
     <button role="tab" id="tabDetail" aria-selected="false" aria-controls="viewDetail">Full detail</button>
   </nav>
+
+  <div class="view" id="viewIntro" role="tabpanel" aria-labelledby="tabIntro" hidden><section id="introPanel"></section></div>
 
   <div class="view" id="viewSummary" role="tabpanel" aria-labelledby="tabSummary">
     <section class="panel es" id="summaryPanel"></section>
@@ -1665,11 +1762,14 @@ function stanceEl(v){
 }
 function positionsTable(){
   const seats = inSeats(); const lead = targetOption();
-  return h('div',{class:'tscroll'},h('table',{class:'grid positions','aria-label':'Where each seat stands on each option'},
+  const W = {support:'Supports',conditional:'With conditions',oppose:'Opposes'};
+  return h('div',{},h('div',{class:'tscroll'},h('table',{class:'grid positions','aria-label':'Where each seat stands on each option'},
     h('thead',{},h('tr',{},h('th',{},'Seat'),...S.options.map(o=>h('th',{},o.label+(lead&&lead.id===o.id?' ★':''))))),
     h('tbody',{},
-      ...seats.map(s=>h('tr',{},h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[s.group].color}`}),s.role)),...S.options.map(o=>h('td',{},stanceEl(S.landing[o.id]?.[s.id]))))),
-      h('tr',{},h('td',{},h('b',{},'Total')),...S.options.map(o=>{const t=tally(o.id);return h('td',{class:'small'},`${t.support} yes · ${t.conditional} if · ${t.oppose} no`);})))));
+      ...seats.map(s=>h('tr',{},h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[s.group].color}`}),s.role)),
+        ...S.options.map(o=>{ const v=S.landing[o.id]?.[s.id]; return h('td',{},h('span',{class:'chipcell s-'+(W[v]?v:'none'),role:'img','aria-label':`${s.role} on ${o.label}: ${W[v]||'no view'}`,title:`${s.role}: ${W[v]||'no view'}`})); }))),
+      h('tr',{},h('td',{},h('b',{class:'small'},'All seats')),...S.options.map(o=>h('td',{},stanceBar(tally(o.id),true))))))),
+    stanceKey(seats.some(s=>S.options.some(o=>!S.landing[o.id]?.[s.id]))));
 }
 function renderLanding(){
   const p = $('#landingPanel');
@@ -1728,8 +1828,10 @@ function followupList(){
 }
 function setView(v){
   UI.view = v;
-  $('#viewSummary').hidden = v!=='summary'; $('#viewDetail').hidden = v!=='detail';
-  $('#tabSummary').setAttribute('aria-selected', v==='summary'); $('#tabDetail').setAttribute('aria-selected', v==='detail');
+  if (v!=='intro') markIntroSeen(); else renderIntro();
+  $('#viewIntro').hidden = v!=='intro'; $('#viewSummary').hidden = v!=='summary'; $('#viewDetail').hidden = v!=='detail';
+  $('#tabIntro').setAttribute('aria-selected', v==='intro'); $('#tabSummary').setAttribute('aria-selected', v==='summary'); $('#tabDetail').setAttribute('aria-selected', v==='detail');
+  document.querySelector('.question').hidden = v==='intro'; $('#stepper').hidden = v==='intro';
   window.scrollTo({top:0});
 }
 function showFinished(){
@@ -1758,6 +1860,7 @@ function renderSummary(){
   const warn = consensusWarnings();
   const list = (items, empty, ordered) => items.length ? h(ordered?'ol':'ul',{},...items.map(x=>h('li',{},x))) : h('p',{class:'muted'},empty);
   const block = (label, kids, cls) => h('div',{class:'es-block'+(cls?' '+cls:'')},h('div',{class:'label'},label),...[].concat(kids));
+  const pcard = (ic, label, n, body, hot) => h('div',{class:'pc'+(hot?' hot':'')},h('div',{class:'pch'},icon(ic),h('span',{class:'label'},label),n?h('span',{class:'cnt'},String(n)):null),body);
   const rows = tensionRows();
   const levers = {}; rows.filter(r=>r.lever).forEach(r=>{ (levers[r.type||'process'] ||= []).push(r); });
   const stanceWord = v => ({support:'Supports',conditional:'With conditions',oppose:'Opposes'})[v]||'—';
@@ -1767,37 +1870,40 @@ function renderSummary(){
     warn.length ? h('div',{class:'alert',role:'note'},h('b',{},'Be careful. '),warn.join(' '),' Simulated seats agree more than real people usually do.',
       S.stressTests.some(x=>x.kind==='opposing') ? null : h('div',{style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>runConstraint('opposing')},'Stress-test with opposing constraints'))) : null,
 
-    h('h3',{class:'es-section'},'Prepare for the room'),
-    h('div',{class:'es-grid'},
-      block('Hardest objections you will face', prep.objections.length ? h('ol',{},...prep.objections.map(o=>h('li',{},o.who?h('b',{},o.who+': '):null,o.what))) : h('p',{class:'muted'},'No strong objections surfaced.')),
-      block(t ? `Strongest case against ${lc(t.label)}` : 'Strongest case against', h('p',{},prep.caseAgainst || 'Not captured in this session.')),
-      block('Questions you can’t answer yet', list(prep.unanswered,'None flagged.')),
-      block('Who is missing from the room', list(prep.missing,'No gaps flagged.'))),
+    Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Where the seats landed') : null,
+    Object.keys(S.landing).length ? stanceBars() : null,
+    Object.keys(S.landing).length ? stanceKey() : null,
 
-    Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Where each seat stands') : null,
-    Object.keys(S.landing).length ? positionsTable() : null,
-    Object.keys(S.landing).length ? h('p',{class:'small muted',style:'margin-top:6px'},`★ ${S.preferred?'The option you are leaning toward':'Most support'}. Simulated perspectives, not stakeholder positions.`) : null,
-    rows.length ? h('h3',{class:'es-section'},`Stakeholder tension${t?` on ${lc(t.label)}`:''}`) : null,
-    rows.length ? h('div',{class:'tscroll'},h('table',{class:'grid tension','aria-label':'Stakeholder tension matrix'},
-      h('thead',{},h('tr',{},h('th',{},'Seat'),h('th',{},'Stance'),h('th',{},'Friction and non-negotiables'),h('th',{},'What would move them'))),
-      h('tbody',{},...rows.map(r=>h('tr',{},
-        h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[r.seat.group].color}`}),r.seat.role)),
-        h('td',{},stanceEl(r.stance)),
-        h('td',{},r.friction, r.nonneg?h('div',{class:'small muted'},'Non-negotiable: ',r.nonneg):null),
-        h('td',{},r.lever||'—')))))) : null,
-    rows.length ? h('div',{class:'btnrow',style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>copyText(tensionMarkdown())},'Copy table as Markdown')) : null,
+    h('h3',{class:'es-section'},'Prepare for the room'),
+    h('div',{class:'prep'},
+      pcard('target', 'Hardest objections', prep.objections.length, prep.objections.length ? h('ol',{},...prep.objections.map(o=>h('li',{},o.who?h('b',{},o.who+': '):null,o.what))) : h('p',{class:'muted'},'No strong objections surfaced.'), true),
+      pcard('against', t ? `Case against ${lc(t.label)}` : 'Case against', null, h('p',{},prep.caseAgainst || 'Not captured in this session.'), true),
+      pcard('question', 'Can’t answer yet', prep.unanswered.length, list(prep.unanswered,'None flagged.')),
+      pcard('addseat', 'Missing from the room', prep.missing.length, list(prep.missing,'No gaps flagged.'))),
 
     Object.keys(levers).length ? h('h3',{class:'es-section'},'What would change their mind') : null,
     Object.keys(levers).length ? h('div',{class:'levers'},...Object.entries(LEVER_TYPES).filter(([k])=>levers[k]).map(([k,l])=>h('div',{class:'lever'},
-      h('div',{class:'label'},l),
+      h('div',{class:'lh'},icon(LEVER_ICON[k]),h('span',{class:'label'},l)),
       h('ul',{class:'plain'},...levers[k].map(r=>h('li',{},r.lever,h('span',{class:'where'},r.seat.role))))))) : null,
+
+    Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Seat by seat') : null,
+    Object.keys(S.landing).length ? positionsTable() : null,
+    rows.length ? h('div',{style:'margin-top:18px'},det('tension', `Stakeholder tension table${t?` on ${lc(t.label)}`:''} · ${rows.length} seats`,
+      h('div',{class:'tscroll'},h('table',{class:'grid tension','aria-label':'Stakeholder tension matrix'},
+        h('thead',{},h('tr',{},h('th',{},'Seat'),h('th',{},'Stance'),h('th',{},'Friction and non-negotiables'),h('th',{},'What would move them'))),
+        h('tbody',{},...rows.map(r=>h('tr',{},
+          h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[r.seat.group].color}`}),r.seat.role)),
+          h('td',{},stanceEl(r.stance)),
+          h('td',{},r.friction, r.nonneg?h('div',{class:'small muted'},'Non-negotiable: ',r.nonneg):null),
+          h('td',{},r.lever||'—')))))),
+      h('div',{class:'btnrow',style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>copyText(tensionMarkdown())},'Copy table as Markdown')))) : null,
 
     S.stressTests.length ? h('h3',{class:'es-section'},'Stress tests') : null,
     S.stressTests.length ? h('ul',{class:'plain'},...S.stressTests.map(x=>h('li',{},h('b',{},x.label+': '),x.summary))) : null,
 
     h('div',{class:'es-grid',style:'margin-top:28px'},
       block('Where they agreed', list(d.agreed,'No clear agreement.')),
-      d.risks.length ? block(`Risk outlook, next ${S.horizon} months`, h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},x.d.level),
+      d.risks.length ? block(`Risk outlook, next ${S.horizon} months`, h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},levelMeter(x.d.level),x.d.level),
         S.revealed.r3 ? h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`) : h('span',{}),
         h('span',{class:'oagree'},x.d.agree))))) : block('Where they disagreed', list(d.disputed,'No open disagreements.'))),
 
@@ -2091,6 +2197,126 @@ function prepareData(){
 }
 function setReality(ans){ S.reality.answer = ans; renderSummary(); renderRecord(); }
 
+/* ---------- icons and the intro view ---------- */
+const ICONS = {
+  doc:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="m9.5 12.5 5 5M14.5 12.5l-5 5"/>',
+  missing:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="18" cy="9" r="2.5" stroke-dasharray="2 2.2"/><path d="M17 14.3c2.4.5 4 2.8 4 5.7" stroke-dasharray="2 2.2"/>',
+  late:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',
+  split:'<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
+  table:'<circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="3.5" r="1.6"/><circle cx="12" cy="20.5" r="1.6"/><circle cx="3.5" cy="12" r="1.6"/><circle cx="20.5" cy="12" r="1.6"/><circle cx="6" cy="6" r="1.6"/><circle cx="18" cy="18" r="1.6"/>',
+  brief:'<rect x="5" y="4" width="14" height="17" rx="1.5"/><path d="M9 4V3h6v1"/><path d="M9 10h6M9 14h6M9 18h3"/>',
+  people:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6 1.6 0 3 .6 4 1.6"/><path d="m15 18 2 2 4-4"/>',
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor"/>',
+  against:'<path d="M12 3 5 6v6c0 4 3 7 7 9 4-2 7-5 7-9V6z"/><path d="m9.8 9.8 4.4 4.4M14.2 9.8l-4.4 4.4"/>',
+  question:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .9-1 1.6v.4"/><path d="M12 17h.01"/>',
+  addseat:'<circle cx="9" cy="8" r="3" stroke-dasharray="2 2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke-dasharray="2 2"/><path d="M19 8v6M16 11h6"/>',
+  evidence:'<path d="M4 20V11M10 20V5M16 20v-6M2 20h20"/>',
+  legal:'<path d="M12 4v16M7 20h10M5 7h14"/><path d="m5 7-2.5 5.5h5zM19 7l-2.5 5.5h5z"/>',
+  funding:'<circle cx="12" cy="12" r="9"/><path d="M14.8 9H11a1.8 1.8 0 0 0 0 3.6h2a1.8 1.8 0 0 1 0 3.6H9M12 6.5V9M12 16.2v2.3"/>',
+  process:'<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>',
+  sim:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 10h.01M15 10h.01M9 15c1.7 1.3 4.3 1.3 6 0"/>',
+  source:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 8h6"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+};
+const icon = (k, cls) => { const s=document.createElement('span'); s.className='ic'+(cls?' '+cls:''); s.setAttribute('aria-hidden','true'); s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`; return s; };
+const GROUP_VAR = {internal:'--g-internal', external:'--g-external', absent:'--g-absent', redteam:'--g-red'};
+function tableFig(groups){
+  const n = groups.length, R = 118, cx = 160, cy = 160;
+  const seats = groups.map((g,i)=>{ const a = -Math.PI/2 + i*2*Math.PI/n; const x=cx+R*Math.cos(a), y=cy+R*Math.sin(a);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="17" style="fill:var(--bg);stroke:var(${GROUP_VAR[g]});stroke-width:2${g==='absent'?';stroke-dasharray:4 3.5':''}"/>`
+      + (i===2 ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="17" style="fill:var(--ink)"/>` : ''); }).join('');
+  const s = groups.map((_,i)=>{ const a=-Math.PI/2+i*2*Math.PI/n; return [cx+R*Math.cos(a), cy+R*Math.sin(a)]; });
+  const lines = [[2,7],[2,5],[7,4]].filter(([a,b])=>s[a]&&s[b]).map(([a,b])=>`<path d="M${s[a][0].toFixed(1)} ${s[a][1].toFixed(1)} Q ${cx} ${cy} ${s[b][0].toFixed(1)} ${s[b][1].toFixed(1)}" style="fill:none;stroke:var(--line-2);stroke-width:1.5;stroke-dasharray:3 4"/>`).join('');
+  return svg(`<svg viewBox="0 0 320 320" role="img" aria-label="A round table of simulated seats: staff, outside groups, an absent voice and a red team"><circle cx="160" cy="160" r="72" style="fill:var(--felt);stroke:var(--felt-edge)"/>${lines}${seats}<text x="160" y="156" text-anchor="middle" style="font:600 13px var(--sans);fill:var(--ink)">Your decision</text><text x="160" y="174" text-anchor="middle" style="font:500 10px var(--mono);fill:var(--ink-3);letter-spacing:.08em">ON THE TABLE</text></svg>`);
+}
+function seatDots(groups){ return h('span',{class:'seatdots','aria-hidden':'true'},...groups.map(g=>h('i',{class:g==='absent'?'dash':'',style:`--gc:var(${GROUP_VAR[g]})`}))); }
+function stanceBar(c, sm){
+  const n = c.support+c.conditional+c.oppose || 1;
+  return h('span',{class:'sbar'+(sm?' sm':''),role:'img','aria-label':`${c.support} support, ${c.conditional} with conditions, ${c.oppose} oppose`},
+    ...['support','conditional','oppose'].filter(k=>c[k]).map(k=>h('i',{class:'s-'+k,style:`width:${(c[k]/n*100).toFixed(1)}%`})));
+}
+function stanceKey(extra){
+  return h('div',{class:'skey'},h('span',{},h('i',{class:'s-support'}),'Supports'),h('span',{},h('i',{class:'s-conditional'}),'With conditions'),h('span',{},h('i',{class:'s-oppose'}),'Opposes'),extra?h('span',{},h('i',{class:'s-none'}),'No view'):null);
+}
+function stanceBars(){
+  const t = targetOption();
+  return h('div',{class:'sbars'},...S.options.map(o=>{ const c=tally(o.id);
+    return h('div',{class:'sbrow'},h('span',{class:'sl'},o.label,t&&t.id===o.id?h('span',{class:'star',title:S.preferred?'The option you are leaning toward':'Most support'},'★'):null),stanceBar(c),h('span',{class:'scount'},`${c.support} · ${c.conditional} · ${c.oppose}`)); }));
+}
+const LEVER_ICON = {evidence:'evidence', legal:'legal', funding:'funding', process:'process'};
+function levelMeter(level){ const n={unlikely:1,possible:2,likely:3}[level]||0; return h('span',{class:`meter on${n}`,'aria-hidden':'true'},h('i'),h('i'),h('i')); }
+
+function goIntroExample(){ markIntroSeen(); if (S.mode!=='demo') setMode('demo'); showFinished(); }
+function goIntroStart(){ markIntroSeen(); setMode('live'); setView('summary'); }
+function markIntroSeen(){ try{ localStorage.setItem('pt_seenIntro','1'); }catch{} }
+function renderIntro(){
+  const p = $('#introPanel'); if (!p || p.dataset.done) return; p.dataset.done='1';
+  const sec = (label, ...kids) => h('section',{class:'isec'},h('div',{class:'label'},label),...kids);
+  const quick = ['internal','internal','external','external','absent','redteam'];
+  const full = ['internal','internal','internal','internal','external','external','external','external','absent','absent','redteam','internal'];
+  const mini = {support:4,conditional:1,oppose:1}, mini2={support:1,conditional:2,oppose:3};
+  p.replaceChildren(h('div',{class:'intro'},
+    h('div',{class:'hero'},
+      h('div',{},
+        h('div',{class:'label'},'Policy Tabletop'),
+        h('h2',{},'Rehearse the room before you’re in it.'),
+        h('p',{class:'sub'},'A table of simulated perspectives argues over your decision, so you see the objections, gaps and missing voices before the real meeting.'),
+        h('div',{class:'btnrow'},
+          h('button',{class:'btn primary',onclick:goIntroExample},'See a finished example'),
+          h('button',{class:'btn',onclick:goIntroStart},'Start your own ',icon('arrow')))),
+      h('div',{class:'herofig'},tableFig(['internal','external','internal','redteam','external','absent','internal','external']))),
+
+    sec('The problem',
+      h('div',{class:'probs'},
+        h('div',{class:'pcard'},icon('doc'),h('b',{},'Reasoning goes unwritten'),h('p',{},'Many public decisions are made in meetings, with little record of why.')),
+        h('div',{class:'pcard'},icon('missing'),h('b',{},'Voices go missing'),h('p',{},'The people most affected are rarely in the room when options are weighed.')),
+        h('div',{class:'pcard'},icon('late'),h('b',{},'Objections arrive late'),h('p',{},'The hardest pushback often shows up after the decision, not before.'))),
+      h('div',{class:'answer'},icon('arrow'),h('span',{},'So: stage the argument first, and walk in knowing what’s coming.'))),
+
+    sec('How it works',
+      h('ol',{class:'flow'},
+        ...[['mic','Describe','Type or speak the decision. Add any background you have.'],
+            ['split','Choose','A quick brief or a full workshop.'],
+            ['table','Debate','Seats give views, push back and change their minds. You can steer.'],
+            ['brief','Read the brief','Objections, who stands where, and what would move them.'],
+            ['people','Check with real people','Use the brief to prepare, never to decide.']]
+          .map(([ic,t,d],i)=>h('li',{},h('span',{class:'bub'},icon(ic)),h('span',{class:'n'},'0'+(i+1)),h('b',{},t),h('p',{},d))))),
+
+    sec('Two ways to run it',
+      h('div',{class:'modes'},
+        h('div',{class:'mode'},h('div',{class:'mh'},h('b',{},'Quick brief'),h('span',{class:'time'},'≈ 1–2 min')),seatDots(quick),
+          h('div',{class:'rounds'},h('span',{},'Opening views'),h('span',{},'Debate'),h('span',{class:'off'},'Final views')),
+          h('p',{},'6 seats. Best for a first read before a meeting.')),
+        h('div',{class:'mode'},h('div',{class:'mh'},h('b',{},'Full workshop'),h('span',{class:'time'},'≈ 5–10 min')),seatDots(full),
+          h('div',{class:'rounds'},h('span',{},'Opening views'),h('span',{},'Debate'),h('span',{},'You steer'),h('span',{},'Final views')),
+          h('p',{},'12 seats, three rounds. Pause, add evidence or push a constraint.'))),
+      h('div',{class:'skey',style:'margin-top:0'},...Object.entries(GROUPS).map(([k,g])=>h('span',{},h('i',{style:`border-radius:50%;border:1.5px ${k==='absent'?'dashed':'solid'} var(${GROUP_VAR[k]})`}),k==='internal'?'Staff':k==='external'?'Outside groups':g.label)))),
+
+    sec('What you walk away with',
+      h('div',{class:'getgrid'},
+        h('div',{class:'get'},h('div',{class:'gh'},icon('table'),'Where each seat stands'),
+          h('div',{class:'sbars'},h('div',{class:'sbrow',style:'grid-template-columns:70px 1fr'},h('span',{class:'small'},'Option A'),stanceBar(mini,true)),h('div',{class:'sbrow',style:'grid-template-columns:70px 1fr'},h('span',{class:'small'},'Option B'),stanceBar(mini2,true))),
+          h('p',{},'Support, conditions and opposition for every option at a glance.')),
+        h('div',{class:'get'},h('div',{class:'gh'},icon('target'),'Prepare for the room'),
+          h('div',{class:'rounds'},h('span',{},'Hardest objections'),h('span',{},'Case against'),h('span',{},'Open questions'),h('span',{},'Who’s missing')),
+          h('p',{},'What you will be asked, and what you can’t answer yet.')),
+        h('div',{class:'get'},h('div',{class:'gh'},icon('process'),'What would change minds'),
+          h('div',{class:'rounds'},...['evidence','legal','funding','process'].map(k=>h('span',{style:'display:inline-flex;gap:5px;align-items:center'},icon(LEVER_ICON[k]),LEVER_TYPES[k]))),
+          h('p',{},'The evidence, guarantee, money or process each seat needs.'))),
+      h('p',{class:'small muted'},'Plus the full transcript, a synthesis, and a decision memo you can copy.')),
+
+    sec('Ground rules',
+      h('div',{class:'guards'},
+        h('span',{},icon('sim'),'Simulated roles, never real people'),
+        h('span',{},icon('source'),'Cites only the sources you give it'),
+        h('span',{},icon('people'),'Informs a decision; people make it'))),
+
+    h('div',{class:'introfoot'},h('b',{},'Ready to try it?'),
+      h('div',{class:'btnrow'},h('button',{class:'btn',onclick:goIntroExample},'See a finished example'),h('button',{class:'btn primary',onclick:goIntroStart},'Start your own ',icon('arrow'))))
+  ));
+}
+
 /* ---------- runtime: inside Claude, or self-hosted ---------- */
 const HOSTED = !(window.claude && window.claude.use);
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2203,12 +2429,14 @@ const setSide = v => { UI.side=v; $('#sideT').setAttribute('aria-selected',v==='
 $('#sideT').onclick = ()=>setSide('transcript');
 $('#sideS').onclick = ()=>setSide('synthesis');
 try{ new IntersectionObserver(([e])=>{ $('#stickyBar').classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0); }).observe($('#qText')); }catch{}
+$('#tabIntro').onclick = ()=>setView('intro');
 $('#tabSummary').onclick = ()=>setView('summary');
 $('#tabDetail').onclick = ()=>setView('detail');
 $('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Show everything' : 'Key exchanges only'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
 $('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
 $('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
 renderAll();
+{ let seen=null; try{ seen = localStorage.getItem('pt_seenIntro'); }catch{} if (!seen) setView('intro'); }
 </script>
 
 </body>
