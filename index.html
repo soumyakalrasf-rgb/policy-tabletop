@@ -218,11 +218,11 @@ table.tension td:nth-child(3){min-width:220px} table.tension td:nth-child(4){min
 .reality{display:flex;gap:10px 14px;flex-wrap:wrap;align-items:center;margin-top:18px;padding:12px 14px;background:var(--surface-2);border-radius:var(--radius)}
 .reality input{width:auto;min-width:220px;flex:1}
 .pill[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.agreebar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px);z-index:4;display:grid;gap:8px;border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:var(--radius);padding:10px 12px;font-size:.84rem}
+.agreebar{position:static;display:grid;gap:8px;border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:var(--radius);padding:10px 12px;font-size:.84rem}
 .agreebar b{color:var(--amber)}
 .agreebar .btn{justify-self:start;background:var(--bg)}
 .chiprow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.controls{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:3}
+.controls{position:static}
 .composer{box-shadow:0 6px 24px color-mix(in srgb,var(--ink) 10%,transparent)}
 .modepick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:620px){.modepick{grid-template-columns:minmax(0,1fr)}}
@@ -290,7 +290,7 @@ button.cite{background:transparent;cursor:pointer;font:inherit;font-size:.74rem}
 details.more{border-top:1px solid var(--line);padding-top:12px}
 details.more summary{cursor:pointer;font-weight:500;font-size:.86rem;color:var(--ink-2)}
 details.more[open] > summary{margin-bottom:14px}
-.inline3{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.inline3{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
 @media (max-width:620px){.inline3{grid-template-columns:minmax(0,1fr)}}
 .ready{display:grid;gap:14px}
 .rule{border:0;border-top:1px solid var(--line);margin:22px 0}
@@ -1581,7 +1581,6 @@ function intakeBlock(){
     h('div',{class:'inline3'},
       h('div',{class:'field'},h('label',{for:'liveType'},'This session'),h('select',{id:'liveType',onchange:e=>{S.decisionType=e.target.value;renderHeader();}},h('option',{value:'deliberative',selected:S.decisionType==='deliberative'},'Informs a decision'),h('option',{value:'decisional',selected:S.decisionType==='decisional'},'Records a decision'))),
       h('div',{class:'field'},h('label',{for:'liveHorizon'},'Look ahead'),h('select',{id:'liveHorizon',onchange:e=>{S.horizon=Number(e.target.value);S.reviewDate=addMonths(S.horizon);renderHeader();}},...[3,6,12,24].map(m=>h('option',{value:m,selected:S.horizon===m},`${m} months`)))),
-      h('button',{class:'btn primary',id:'draftBtn',onclick:draftSetup,disabled:!SAMPLE||!!S.live.busy},S.live.busy?'Drafting…':S.live.drafted?'Redraft':'Draft the session →')
     ),
     S.live.busy ? h('div',{class:'drafting',role:'status'},h('span',{class:'spin'}),S.live.busy) : null,
     liveStatusBlock(),
@@ -2360,12 +2359,18 @@ function prepareData(){
   const t = targetOption();
   const objections = asList(p.objections).map(o=>typeof o==='string'?{who:'',what:o}:{who:String(o.who||''),what:String(o.what||'')}).filter(o=>o.what).slice(0,3);
   if (!objections.length && t) inSeats().filter(s=>S.landing[t.id]?.[s.id]==='oppose').slice(0,3).forEach(s=>{ const r=S.tension.find(x=>x.seat===s.id); objections.push({who:s.role, what:r?.friction||'Opposes this option.'}); });
-  return {
-    objections,
-    caseAgainst: String(p.case_against||p.caseAgainst||''),
-    unanswered: asList(p.unanswered).map(String).slice(0,4).concat(asList(p.unanswered).length?[]:S.matrix.ku.slice(0,3).map(x=>x.text)),
-    missing: asList(p.missing).map(String).slice(0,3)
-  };
+  // Fallbacks so the page is never empty when the model skipped this part: use what the seats actually said.
+  const lastSaid = id => { const t=[...S.turns].reverse().find(x=>x.seat===id && x.text && x.type!=='moderator'); return t ? t.text : ''; };
+  if (!objections.length && t) inSeats().filter(s=>['oppose','conditional'].includes(S.landing[t.id]?.[s.id])).sort((a,b)=>(S.landing[t.id][a.id]==='oppose'?0:1)-(S.landing[t.id][b.id]==='oppose'?0:1)).slice(0,3).forEach(s=>{ const r=S.tension.find(x=>x.seat===s.id); const w=r?.friction||lastSaid(s.id); if (w) objections.push({who:s.role, what:w}); });
+  if (!objections.length) S.turns.filter(x=>x.type==='challenge' && x.text).slice(-3).forEach(x=>objections.push({who:speakerInfo(x.seat).name, what:x.text}));
+  const red = inSeats().find(s=>s.group==='redteam');
+  let caseAgainst = String(p.case_against||p.caseAgainst||'');
+  if (!caseAgainst && red) caseAgainst = lastSaid(red.id);
+  let unanswered = asList(p.unanswered).map(String).slice(0,4);
+  if (!unanswered.length) unanswered = [...S.matrix.ku.slice(0,3).map(x=>x.text), ...S.expertQs].slice(0,3);
+  let missing = asList(p.missing).map(String).slice(0,3);
+  if (!missing.length) missing = inSeats().filter(s=>s.group==='absent').map(s=>`${s.role.replace(/\s*\(absent voice\)/i,'')}: only simulated here, so hear from them directly.`);
+  return { objections, caseAgainst, unanswered, missing };
 }
 function setReality(ans){ S.reality.answer = ans; renderSummary(); renderRecord(); }
 
@@ -2499,6 +2504,7 @@ function animateIn(el, dir){ if (!el) return; el.classList.remove('enter'); el.s
 function go(k){
   const order = SCREENS.map(x=>x[0]);
   const prev = UI.screen; UI.screen = k;
+  if (prev!==k) document.querySelectorAll('.toast').forEach(t=>t.remove());
   if (k==='welcome') { renderIntro(); setIntroPage(UI.introPage||0, 0, true); } else markIntroSeen();
   for (const [s] of SCREENS) $('#scr-'+s).hidden = s!==k;
   const qb = document.querySelector('.question'); qb.hidden = k==='welcome' || (k==='setup' && !S.started); qb.classList.toggle('compact', k!=='setup'); $('#qText').title = k!=='setup' ? (S.question||'') : '';
