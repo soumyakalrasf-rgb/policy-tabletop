@@ -435,6 +435,53 @@ table.positions th{white-space:normal;min-width:80px;max-width:140px;text-transf
 .meter.on1 i:nth-child(-n+1),.meter.on2 i:nth-child(-n+2){background:var(--ink-2)}
 .meter.on3 i{background:var(--signal)}
 .btn .ic{width:16px;height:16px}
+/* app flow */
+body{padding-bottom:120px}
+.flowbar{display:flex;gap:6px}
+.flowbar button{flex:1;min-width:0;border:0;background:transparent;padding:0 0 4px;display:grid;gap:8px;justify-items:start;font-size:.82rem;font-weight:500;color:var(--ink-3);text-align:left}
+.flowbar .bar{height:3px;width:100%;border-radius:999px;background:var(--line);transition:background .2s}
+.flowbar button.done .bar{background:var(--ink-3)}
+.flowbar button[aria-current="step"]{color:var(--ink);font-weight:600}
+.flowbar button[aria-current="step"] .bar{background:var(--ink)}
+.flowbar button:disabled{cursor:not-allowed;opacity:.45}
+.flowbar button:not(:disabled):hover{color:var(--ink)}
+.flowbar .fn{font-family:var(--mono);font-size:.7rem;margin-right:6px;font-weight:400}
+.flowbar .ft{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+@media (max-width:620px){.flowbar button:not([aria-current="step"]) .ft .fl{display:none}}
+.screen{min-height:calc(100dvh - 300px)}
+.ipage{min-height:calc(100dvh - 300px);display:grid;align-content:center;gap:22px;padding-block:8px 24px}
+.ipage .isec{gap:22px}
+.ipage .isec > .label{font-size:.78rem}
+.ipage h3.ititle{font-size:clamp(1.4rem,3vw,2rem);font-weight:700;letter-spacing:-.02em;line-height:1.15;max-width:24ch}
+.appbar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--bg);border-top:1px solid var(--line);padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px))}
+.appbar-in{max-width:1120px;margin-inline:auto;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center}
+.appbar-in > :first-child{justify-self:start}
+.appbar-in > :last-child{justify-self:end}
+.appbar .btn{padding:10px 16px;font-size:.9rem;max-width:100%}
+.appbar .btn .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar .where{font-size:.8rem;color:var(--ink-3);white-space:nowrap}
+@media (max-width:520px){.appbar .bk .t{display:none}.appbar .where{display:none}}
+.pdots{display:flex;gap:6px;align-items:center}
+.pdots button{width:8px;height:8px;border-radius:999px;border:0;padding:0;background:var(--line-2);transition:width .2s,background .2s}
+.pdots button[aria-current="true"]{width:24px;background:var(--ink)}
+.btn.pulse{animation:pulse 1.6s ease-in-out 3}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--ink) 20%,transparent)}}
+.enter{animation:enter .28s ease-out}
+@keyframes enter{from{opacity:0;transform:translateX(calc(var(--dx,1) * 18px))}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.enter,.btn.pulse{animation:none}}
+.toast{bottom:calc(90px + env(safe-area-inset-bottom,0px))!important}
+.bnav{display:flex;gap:4px;overflow-x:auto;margin-bottom:22px;scrollbar-width:none}
+.bnav button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;font-size:.82rem;font-weight:500;color:var(--ink-3);white-space:nowrap}
+.bnav button[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.bpage > .es-section:first-child{margin-top:4px;border-top:0;padding-top:0;font-size:clamp(1.25rem,2.6vw,1.6rem);font-weight:700;letter-spacing:-.015em}
+.empty-screen{display:grid;justify-items:center;text-align:center;gap:10px;padding:64px 16px;max-width:460px;margin-inline:auto}
+.empty-screen > .ic{width:40px;height:40px;color:var(--ink-3)}
+.empty-screen b{font-size:1.1rem}
+.question.compact .label,.question.compact .meta{display:none}
+.question.compact h1{font-size:1rem;font-weight:600;letter-spacing:0;max-width:none;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+header.top{gap:14px}
+.appbar .ts{display:none}
+@media (max-width:520px){.banner span{display:none}.brand .label{display:none}.appbar .has-ts .t{display:none}.appbar .has-ts .ts{display:inline}}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -449,6 +496,7 @@ table.positions th{white-space:normal;min-width:80px;max-width:140px;text-transf
         <button id="modeLive" aria-pressed="false">Live session</button>
       </div>
     </div>
+    <nav class="flowbar" id="flowbar" aria-label="Steps"></nav>
     <div class="question">
       <div class="label">Decision question</div>
       <h1 id="qText"></h1>
@@ -457,17 +505,10 @@ table.positions th{white-space:normal;min-width:80px;max-width:140px;text-transf
     <ol class="stepper" id="stepper"></ol>
   </header>
 
-  <nav class="viewtabs" role="tablist" aria-label="Views">
-    <button role="tab" id="tabIntro" aria-selected="false" aria-controls="viewIntro">How it works</button>
-    <button role="tab" id="tabSummary" aria-selected="true" aria-controls="viewSummary">Summary</button>
-    <button role="tab" id="tabDetail" aria-selected="false" aria-controls="viewDetail">Full detail</button>
-  </nav>
-
-  <div class="view" id="viewIntro" role="tabpanel" aria-labelledby="tabIntro" hidden><section id="introPanel"></section></div>
-
-  <div class="view" id="viewSummary" role="tabpanel" aria-labelledby="tabSummary">
-    <section class="panel es" id="summaryPanel"></section>
-    <section class="panel" id="setupPanel"></section>
+  <main class="screens" id="screens">
+  <div class="screen" id="scr-welcome" hidden><section id="introPanel"></section></div>
+  <div class="screen" id="scr-setup"><section class="panel" id="setupPanel"></section></div>
+  <div class="screen" id="scr-debate" hidden>
     <section class="stage" id="stage">
       <div class="tablebox">
         <div class="table" id="table"><div class="felt" id="felt"></div></div>
@@ -487,8 +528,8 @@ table.positions th{white-space:normal;min-width:80px;max-width:140px;text-transf
       </div>
     </section>
   </div>
-
-  <div class="view" id="viewDetail" role="tabpanel" aria-labelledby="tabDetail" hidden>
+  <div class="screen" id="scr-brief" hidden><section class="panel es" id="summaryPanel"></section></div>
+  <div class="screen" id="scr-detail" hidden>
     <section class="outs" id="outs">
       <div class="panel span2" id="analysisPanel"></div>
       <div class="panel span2" id="matrixPanel"></div>
@@ -498,6 +539,7 @@ table.positions th{white-space:normal;min-width:80px;max-width:140px;text-transf
       <div class="panel span2 record" id="recordPanel"></div>
     </section>
   </div>
+  </main>
 
   <aside class="drawer" id="drawer" role="complementary" aria-labelledby="drawerTitle" hidden></aside>
 
@@ -513,10 +555,12 @@ table.positions th{white-space:normal;min-width:80px;max-width:140px;text-transf
   </footer>
 </div>
 
+<div class="appbar" id="appbar"><div class="appbar-in"></div></div>
+
 <script>
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-var UI = {view:'summary', open:{}, keyOnly:false, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
+var UI = {view:'summary', screen:'setup', introPage:0, briefPage:0, briefPages:[], readyNoted:false, open:{}, keyOnly:false, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs||{})){
@@ -1234,7 +1278,7 @@ async function liveEvidence(text){
 
 /* ---------- actions ---------- */
 function setMode(mode){
-  pause(); S = freshState(mode); renderAll(); window.scrollTo({top:0});
+  pause(); S = freshState(mode); UI.briefPage=0; renderAll(); go('setup');
 }
 function startTabletop(){
   if (!S.questionConfirmed){ toast('Confirm the decision question first.'); return; }
@@ -1244,14 +1288,14 @@ function startTabletop(){
   S.started = true; S.reviewDate = addMonths(S.horizon);
   if (S.mode==='demo'){ S.queue = demoScript(); play(); }
   else { if (!SAMPLE){ toast(ERR.unavailable); return; } S.playing=true; renderAll(); liveRun('r1'); loop(); }
-  document.getElementById('stage').scrollIntoView({behavior:'smooth', block:'start'});
+  go('debate');
 }
 function restart(){
   const k = {rawQuestion:S.rawQuestion, question:S.question, questionConfirmed:S.questionConfirmed, decisionType:S.decisionType, horizon:S.horizon, context:S.context, contextItems:S.contextItems, runMode:S.runMode, preferred:S.preferred,
     options:S.options, risks:S.risks, seats:S.seats.filter(s=>!s.addedMid)};
   const mode=S.mode, drafted=S.live.drafted;
   pause(); S = freshState(mode); Object.assign(S, k); S.live.drafted = drafted; S.shift = S.risks.map(()=>0); S.reviewDate = addMonths(S.horizon);
-  renderAll(); window.scrollTo({top:0});
+  UI.briefPage=0; renderAll(); go('setup');
 }
 
 async function submitEvidence(){
@@ -1414,7 +1458,7 @@ async function copyText(text){
 /* ---------- render ---------- */
 function renderAll(){
   renderHeader(); renderSummary(); renderSetup(); renderAgreeBanner(); renderTable(); renderSeatCard(); renderTranscript(); renderControls();
-  renderLanding(); renderAnalysis(); renderMatrix(); renderLists(); renderRecord(); renderSticky();
+  renderLanding(); renderAnalysis(); renderMatrix(); renderLists(); renderRecord(); renderSticky(); renderFlowbar(); renderAppbar();
 }
 function renderHeader(){
   $('#modeDemo').setAttribute('aria-pressed', S.mode==='demo'); $('#modeLive').setAttribute('aria-pressed', S.mode==='live');
@@ -1448,7 +1492,10 @@ function insertStarter(t){
 function det(key, label, ...kids){ return h('details',{class:'more',open:!!UI.open[key],ontoggle:e=>{UI.open[key]=e.target.open;}},h('summary',{},label),...kids); }
 function renderSetup(){
   const p = $('#setupPanel');
-  if (S.started){ p.hidden = true; return; }
+  if (S.started){ p.hidden = false; p.dataset.sig='started';
+    p.replaceChildren(h('div',{class:'empty-screen'},icon('table'),h('b',{},'This session is under way'),h('p',{class:'muted'},'To change the question, options or seats, start over.'),
+      h('div',{class:'btnrow'},h('button',{class:'btn',onclick:restart},'Start over'),h('button',{class:'btn primary',onclick:()=>go('debate')},'Back to the debate'))));
+    return; }
   p.hidden = false;
   if (p.contains(document.activeElement) && p.dataset.sig===setupSig()) return; // don't rebuild while typing
   p.dataset.sig = setupSig();
@@ -1826,32 +1873,25 @@ function followupList(){
   for (const x of base){ if (!S.followups.some(f=>f.text===x.next)) S.followups.push({text:x.next, where:x.where||'', owner:'', due:'', status:'open', said:'', match:''}); }
   return S.followups;
 }
-function setView(v){
-  UI.view = v;
-  if (v!=='intro') markIntroSeen(); else renderIntro();
-  $('#viewIntro').hidden = v!=='intro'; $('#viewSummary').hidden = v!=='summary'; $('#viewDetail').hidden = v!=='detail';
-  $('#tabIntro').setAttribute('aria-selected', v==='intro'); $('#tabSummary').setAttribute('aria-selected', v==='summary'); $('#tabDetail').setAttribute('aria-selected', v==='detail');
-  document.querySelector('.question').hidden = v==='intro'; $('#stepper').hidden = v==='intro';
-  window.scrollTo({top:0});
-}
 function showFinished(){
   pause();
   if (!S.started){ S.started=true; S.reviewDate=addMonths(S.horizon); S.shift=S.risks.map(()=>0); S.queue=demoScript(); }
   releaseGate();
   let n=0; while (S.queue.length && n<2000){ applyEvent(S.queue.shift()); n++; }
-  S.awaitingSteer=false; S.playing=false; renderAll(); setView('summary');
+  S.awaitingSteer=false; S.playing=false; UI.readyNoted=true; UI.briefPage=0; renderAll(); setView('summary');
 }
 function renderSummary(){
   const p = $('#summaryPanel');
   const head = h('div',{class:'es-head'},h('span',{class:'label'},'Executive brief'),h('span',{class:'stamp'},'Simulated · informs, does not decide'));
   const d = (S.summary || Object.keys(S.landing).length) ? summaryData() : null;
   if (!d){
-    p.hidden = !S.started;
-    if (!S.started) return;
+    p.hidden = false; UI.briefPages = [];
     const stageName = STAGES.find(x=>x[0]===S.stage)[1];
-    p.replaceChildren(...[head,
-      h('p',{class:'es-empty'},`The session is running (${stageName}). The brief appears here when it finishes.`),
-      S.mode==='demo' ? h('div',{class:'btnrow'},h('button',{class:'btn primary',onclick:showFinished},'Skip to the results')) : null].filter(Boolean));
+    p.replaceChildren(h('div',{class:'empty-screen'},icon('brief'),
+      h('b',{},S.started ? 'The brief is on its way' : 'No brief yet'),
+      h('p',{class:'muted'},S.started ? `The session is running (${stageName}). The brief appears here when it finishes.` : 'Run a session and the brief appears here.'),
+      h('div',{class:'btnrow'},S.started ? h('button',{class:'btn',onclick:()=>go('debate')},'Watch the debate') : h('button',{class:'btn primary',onclick:()=>go('setup')},'Set up a session'),
+        S.started && S.mode==='demo' ? h('button',{class:'btn primary',onclick:showFinished},'Skip to the results') : null)));
     return;
   }
   p.hidden = false;
@@ -1864,7 +1904,9 @@ function renderSummary(){
   const rows = tensionRows();
   const levers = {}; rows.filter(r=>r.lever).forEach(r=>{ (levers[r.type||'process'] ||= []).push(r); });
   const stanceWord = v => ({support:'Supports',conditional:'With conditions',oppose:'Opposes'})[v]||'—';
-  p.replaceChildren(...[head,
+  const hasLand = Object.keys(S.landing).length>0;
+  const pages = [
+    ['Overview', [
     h('h2',{class:'es-headline'},d.headline),
     d.discussion ? h('p',{class:'es-lede'},d.discussion) : null,
     warn.length ? h('div',{class:'alert',role:'note'},h('b',{},'Be careful. '),warn.join(' '),' Simulated seats agree more than real people usually do.',
@@ -1872,20 +1914,23 @@ function renderSummary(){
 
     Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Where the seats landed') : null,
     Object.keys(S.landing).length ? stanceBars() : null,
-    Object.keys(S.landing).length ? stanceKey() : null,
-
+    Object.keys(S.landing).length ? stanceKey() : null
+    ]],
+    ['Prepare', [
     h('h3',{class:'es-section'},'Prepare for the room'),
     h('div',{class:'prep'},
       pcard('target', 'Hardest objections', prep.objections.length, prep.objections.length ? h('ol',{},...prep.objections.map(o=>h('li',{},o.who?h('b',{},o.who+': '):null,o.what))) : h('p',{class:'muted'},'No strong objections surfaced.'), true),
       pcard('against', t ? `Case against ${lc(t.label)}` : 'Case against', null, h('p',{},prep.caseAgainst || 'Not captured in this session.'), true),
       pcard('question', 'Can’t answer yet', prep.unanswered.length, list(prep.unanswered,'None flagged.')),
-      pcard('addseat', 'Missing from the room', prep.missing.length, list(prep.missing,'No gaps flagged.'))),
-
+      pcard('addseat', 'Missing from the room', prep.missing.length, list(prep.missing,'No gaps flagged.')))
+    ]],
+    Object.keys(levers).length ? ['Change minds', [
     Object.keys(levers).length ? h('h3',{class:'es-section'},'What would change their mind') : null,
     Object.keys(levers).length ? h('div',{class:'levers'},...Object.entries(LEVER_TYPES).filter(([k])=>levers[k]).map(([k,l])=>h('div',{class:'lever'},
       h('div',{class:'lh'},icon(LEVER_ICON[k]),h('span',{class:'label'},l)),
-      h('ul',{class:'plain'},...levers[k].map(r=>h('li',{},r.lever,h('span',{class:'where'},r.seat.role))))))) : null,
-
+      h('ul',{class:'plain'},...levers[k].map(r=>h('li',{},r.lever,h('span',{class:'where'},r.seat.role))))))) : null
+    ]] : null,
+    hasLand ? ['Seat by seat', [
     Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Seat by seat') : null,
     Object.keys(S.landing).length ? positionsTable() : null,
     rows.length ? h('div',{style:'margin-top:18px'},det('tension', `Stakeholder tension table${t?` on ${lc(t.label)}`:''} · ${rows.length} seats`,
@@ -1896,12 +1941,13 @@ function renderSummary(){
           h('td',{},stanceEl(r.stance)),
           h('td',{},r.friction, r.nonneg?h('div',{class:'small muted'},'Non-negotiable: ',r.nonneg):null),
           h('td',{},r.lever||'—')))))),
-      h('div',{class:'btnrow',style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>copyText(tensionMarkdown())},'Copy table as Markdown')))) : null,
-
+      h('div',{class:'btnrow',style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>copyText(tensionMarkdown())},'Copy table as Markdown')))) : null
+    ]] : null,
+    ['Outlook', [h('h3',{class:'es-section'},'Outlook and what they agreed on'),
     S.stressTests.length ? h('h3',{class:'es-section'},'Stress tests') : null,
     S.stressTests.length ? h('ul',{class:'plain'},...S.stressTests.map(x=>h('li',{},h('b',{},x.label+': '),x.summary))) : null,
 
-    h('div',{class:'es-grid',style:'margin-top:28px'},
+    h('div',{class:'es-grid',style:'margin-top:8px'},
       block('Where they agreed', list(d.agreed,'No clear agreement.')),
       d.risks.length ? block(`Risk outlook, next ${S.horizon} months`, h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},levelMeter(x.d.level),x.d.level),
         S.revealed.r3 ? h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`) : h('span',{}),
@@ -1909,15 +1955,20 @@ function renderSummary(){
 
     h('div',{class:'es-foot'},
       h('div',{class:'btnrow'},
-        h('button',{class:'btn',onclick:()=>$('#stage').scrollIntoView({behavior:'smooth'})},'See the transcript and synthesis ↓')),
+        h('button',{class:'btn',onclick:()=>go('debate')},'← Transcript and synthesis')),
       h('div',{class:'btnrow'},
-        h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
-        h('button',{class:'btn primary',onclick:()=>setView('detail')},'Full detail →'))),
+        h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'))),
     h('div',{class:'reality'},
       h('span',{class:'small'},'After your real meeting: did this rehearsal surface what actually came up?'),
       h('div',{class:'btnrow'},...[['yes','Yes'],['partly','Partly'],['no','No']].map(([v,l])=>h('button',{class:'pill','aria-pressed':S.reality.answer===v,onclick:()=>setReality(v)},l)),
         S.reality.answer ? h('input',{type:'text',id:'realityNote','aria-label':'What it missed or got right',placeholder:'What it missed or got right',value:S.reality.note,oninput:e=>{S.reality.note=e.target.value;renderRecord();}}) : null))
-  ].filter(Boolean));
+    ]]
+  ].filter(Boolean);
+  UI.briefPages = pages.map(x=>x[0]);
+  UI.briefPage = Math.min(UI.briefPage||0, pages.length-1);
+  p.replaceChildren(head,
+    h('nav',{class:'bnav','aria-label':'Brief sections'},...pages.map(([t],i)=>h('button',{'aria-current':String(i===UI.briefPage),onclick:()=>setBriefPage(i)},t))),
+    ...pages.map(([t,kids],i)=>h('div',{class:'bpage',hidden:i!==UI.briefPage,'aria-label':t},...kids.filter(Boolean))));
 }
 function renderMatrix(){
   const q = (title,sub,list,whereLabel,extra) => h('div',{class:'quad'},
@@ -2253,11 +2304,12 @@ function markIntroSeen(){ try{ localStorage.setItem('pt_seenIntro','1'); }catch{
 function renderIntro(){
   const p = $('#introPanel'); if (!p || p.dataset.done) return; p.dataset.done='1';
   const sec = (label, ...kids) => h('section',{class:'isec'},h('div',{class:'label'},label),...kids);
+  const pg = (label, title, ...kids) => h('div',{class:'ipage'},h('section',{class:'isec'},h('div',{class:'label'},label),h('h3',{class:'ititle'},title),...kids));
   const quick = ['internal','internal','external','external','absent','redteam'];
   const full = ['internal','internal','internal','internal','external','external','external','external','absent','absent','redteam','internal'];
   const mini = {support:4,conditional:1,oppose:1}, mini2={support:1,conditional:2,oppose:3};
   p.replaceChildren(h('div',{class:'intro'},
-    h('div',{class:'hero'},
+    h('div',{class:'ipage'},h('div',{class:'hero'},
       h('div',{},
         h('div',{class:'label'},'Policy Tabletop'),
         h('h2',{},'Rehearse the room before you’re in it.'),
@@ -2265,16 +2317,16 @@ function renderIntro(){
         h('div',{class:'btnrow'},
           h('button',{class:'btn primary',onclick:goIntroExample},'See a finished example'),
           h('button',{class:'btn',onclick:goIntroStart},'Start your own ',icon('arrow')))),
-      h('div',{class:'herofig'},tableFig(['internal','external','internal','redteam','external','absent','internal','external']))),
+      h('div',{class:'herofig'},tableFig(['internal','external','internal','redteam','external','absent','internal','external'])))),
 
-    sec('The problem',
+    pg('The problem','Big decisions, thin records.',
       h('div',{class:'probs'},
         h('div',{class:'pcard'},icon('doc'),h('b',{},'Reasoning goes unwritten'),h('p',{},'Many public decisions are made in meetings, with little record of why.')),
         h('div',{class:'pcard'},icon('missing'),h('b',{},'Voices go missing'),h('p',{},'The people most affected are rarely in the room when options are weighed.')),
         h('div',{class:'pcard'},icon('late'),h('b',{},'Objections arrive late'),h('p',{},'The hardest pushback often shows up after the decision, not before.'))),
       h('div',{class:'answer'},icon('arrow'),h('span',{},'So: stage the argument first, and walk in knowing what’s coming.'))),
 
-    sec('How it works',
+    pg('How it works','From question to brief in five steps.',
       h('ol',{class:'flow'},
         ...[['mic','Describe','Type or speak the decision. Add any background you have.'],
             ['split','Choose','A quick brief or a full workshop.'],
@@ -2283,7 +2335,7 @@ function renderIntro(){
             ['people','Check with real people','Use the brief to prepare, never to decide.']]
           .map(([ic,t,d],i)=>h('li',{},h('span',{class:'bub'},icon(ic)),h('span',{class:'n'},'0'+(i+1)),h('b',{},t),h('p',{},d))))),
 
-    sec('Two ways to run it',
+    pg('Two ways to run it','Pick the depth you need.',
       h('div',{class:'modes'},
         h('div',{class:'mode'},h('div',{class:'mh'},h('b',{},'Quick brief'),h('span',{class:'time'},'≈ 1–2 min')),seatDots(quick),
           h('div',{class:'rounds'},h('span',{},'Opening views'),h('span',{},'Debate'),h('span',{class:'off'},'Final views')),
@@ -2293,7 +2345,7 @@ function renderIntro(){
           h('p',{},'12 seats, three rounds. Pause, add evidence or push a constraint.'))),
       h('div',{class:'skey',style:'margin-top:0'},...Object.entries(GROUPS).map(([k,g])=>h('span',{},h('i',{style:`border-radius:50%;border:1.5px ${k==='absent'?'dashed':'solid'} var(${GROUP_VAR[k]})`}),k==='internal'?'Staff':k==='external'?'Outside groups':g.label)))),
 
-    sec('What you walk away with',
+    pg('What you walk away with','A brief you can take into the room.',
       h('div',{class:'getgrid'},
         h('div',{class:'get'},h('div',{class:'gh'},icon('table'),'Where each seat stands'),
           h('div',{class:'sbars'},h('div',{class:'sbrow',style:'grid-template-columns:70px 1fr'},h('span',{class:'small'},'Option A'),stanceBar(mini,true)),h('div',{class:'sbrow',style:'grid-template-columns:70px 1fr'},h('span',{class:'small'},'Option B'),stanceBar(mini2,true))),
@@ -2304,17 +2356,92 @@ function renderIntro(){
         h('div',{class:'get'},h('div',{class:'gh'},icon('process'),'What would change minds'),
           h('div',{class:'rounds'},...['evidence','legal','funding','process'].map(k=>h('span',{style:'display:inline-flex;gap:5px;align-items:center'},icon(LEVER_ICON[k]),LEVER_TYPES[k]))),
           h('p',{},'The evidence, guarantee, money or process each seat needs.'))),
-      h('p',{class:'small muted'},'Plus the full transcript, a synthesis, and a decision memo you can copy.')),
-
-    sec('Ground rules',
+      h('p',{class:'small muted'},'Plus the full transcript, a synthesis, and a decision memo you can copy.'),
+      h('div',{class:'label',style:'margin-top:8px'},'Ground rules'),
       h('div',{class:'guards'},
         h('span',{},icon('sim'),'Simulated roles, never real people'),
         h('span',{},icon('source'),'Cites only the sources you give it'),
-        h('span',{},icon('people'),'Informs a decision; people make it'))),
-
+        h('span',{},icon('people'),'Informs a decision; people make it')),
     h('div',{class:'introfoot'},h('b',{},'Ready to try it?'),
-      h('div',{class:'btnrow'},h('button',{class:'btn',onclick:goIntroExample},'See a finished example'),h('button',{class:'btn primary',onclick:goIntroStart},'Start your own ',icon('arrow'))))
+      h('div',{class:'btnrow'},h('button',{class:'btn',onclick:goIntroExample},'See a finished example'),h('button',{class:'btn primary',onclick:goIntroStart},'Start your own ',icon('arrow')))))
   ));
+  setIntroPage(UI.introPage||0, 0, true);
+}
+
+/* ---------- app flow: one screen at a time ---------- */
+const SCREENS = [['welcome','How it works'],['setup','Set up'],['debate','Debate'],['brief','Brief'],['detail','Detail']];
+const INTRO_LABELS = ['Welcome','The problem','How it works','Two ways to run it','What you get'];
+function hasResults(){ return !!(S.summary || Object.keys(S.landing||{}).length); }
+function screenOk(k){ return k==='welcome' || k==='setup' || (k==='debate' && S.started) || ((k==='brief'||k==='detail') && hasResults()); }
+function animateIn(el, dir){ if (!el) return; el.classList.remove('enter'); el.style.setProperty('--dx', dir<0?-1:1); void el.offsetWidth; el.classList.add('enter'); }
+function go(k){
+  const order = SCREENS.map(x=>x[0]);
+  const prev = UI.screen; UI.screen = k;
+  if (k==='welcome') { renderIntro(); setIntroPage(UI.introPage||0, 0, true); } else markIntroSeen();
+  for (const [s] of SCREENS) $('#scr-'+s).hidden = s!==k;
+  const qb = document.querySelector('.question'); qb.hidden = k==='welcome'; qb.classList.toggle('compact', k!=='setup'); $('#qText').title = k!=='setup' ? (S.question||'') : '';
+  $('#stepper').hidden = k!=='debate';
+  if (prev!==k){ animateIn($('#scr-'+k), order.indexOf(k) < order.indexOf(prev) ? -1 : 1); window.scrollTo({top:0}); }
+  renderFlowbar(); renderAppbar();
+}
+function setView(v){ go(v==='intro' ? 'welcome' : v==='detail' ? 'detail' : hasResults() ? 'brief' : S.started ? 'debate' : 'setup'); }
+function setIntroPage(i, dir, quiet){
+  const pages = [...document.querySelectorAll('#introPanel .ipage')]; if (!pages.length) return;
+  i = Math.max(0, Math.min(pages.length-1, i)); const d = dir ?? (i < (UI.introPage||0) ? -1 : 1);
+  UI.introPage = i; pages.forEach((p,j)=>p.hidden = j!==i);
+  if (!quiet){ animateIn(pages[i], d); window.scrollTo({top:0}); }
+  renderAppbar();
+}
+function setBriefPage(i){
+  const pages = [...document.querySelectorAll('#summaryPanel .bpage')]; if (!pages.length) return;
+  i = Math.max(0, Math.min(pages.length-1, i)); const d = i < (UI.briefPage||0) ? -1 : 1;
+  UI.briefPage = i; pages.forEach((p,j)=>p.hidden = j!==i);
+  document.querySelectorAll('#summaryPanel .bnav button').forEach((b,j)=>b.setAttribute('aria-current', String(j===i)));
+  animateIn(pages[i], d); window.scrollTo({top:0}); renderAppbar();
+}
+function renderFlowbar(){
+  const cur = SCREENS.findIndex(x=>x[0]===UI.screen);
+  $('#flowbar').replaceChildren(...SCREENS.map(([k,l],i)=>h('button',{class:i<cur?'done':'','aria-current':i===cur?'step':null,disabled:!screenOk(k),onclick:()=>go(k)},
+    h('span',{class:'bar','aria-hidden':'true'}),h('span',{class:'ft'},h('span',{class:'fn'},String(i+1)),h('span',{class:'fl'},l)))));
+}
+function renderAppbar(){
+  const bar = $('#appbar'); if (!bar || !UI.screen) return;
+  const k = UI.screen, ready = hasResults();
+  if (ready && !UI.readyNoted){ UI.readyNoted = true; if (k==='debate') toast('The brief is ready'); }
+  if (!ready) UI.readyNoted = false;
+  const back = (label, fn, dis) => h('button',{class:'btn bk',onclick:fn,disabled:!!dis,'aria-label':'Back: '+label},'←',h('span',{class:'t'},' '+label));
+  const next = (label, fn, o={}) => h('button',{class:'btn primary'+(o.pulse?' pulse':'')+(o.short?' has-ts':''),onclick:fn,disabled:!!o.dis},h('span',{class:'t'},label),o.short?h('span',{class:'ts'},o.short):null,' →');
+  const dots = (labels, i, fn) => h('div',{class:'pdots',role:'group','aria-label':'Pages'},...labels.map((l,j)=>h('button',{'aria-current':String(j===i),'aria-label':l,title:l,onclick:()=>fn(j)})));
+  let L, C, R;
+  if (k==='welcome'){
+    const i = UI.introPage||0, n = INTRO_LABELS.length;
+    L = back('Back', ()=>setIntroPage(i-1), i===0); C = dots(INTRO_LABELS, i, j=>setIntroPage(j));
+    R = i<n-1 ? next('Next', ()=>setIntroPage(i+1)) : next('Set up a session', ()=>go('setup'));
+  } else if (k==='setup'){
+    L = back('How it works', ()=>go('welcome')); C = h('span',{class:'where'},'Step 2 of 5');
+    R = S.started ? next('Back to the debate', ()=>go('debate'))
+      : S.mode==='demo' ? next('Start the example', ()=>{ S.questionConfirmed=true; startTabletop(); })
+      : S.live.drafted ? next('Confirm and start', ()=>{ S.questionConfirmed=true; startTabletop(); })
+      : next('Start', ()=>{}, {dis:true});
+  } else if (k==='debate'){
+    L = back('Set up', ()=>go('setup')); C = h('span',{class:'where'},STAGES.find(x=>x[0]===S.stage)[1]);
+    R = ready ? next('See the brief', ()=>go('brief'), {pulse:true})
+      : S.mode==='demo' && S.started ? h('button',{class:'btn',onclick:showFinished},'Skip to results →')
+      : next('See the brief', ()=>{}, {dis:true});
+  } else if (k==='brief'){
+    const P = UI.briefPages||[], i = Math.min(UI.briefPage||0, Math.max(0,P.length-1));
+    L = back(i ? P[i-1] : 'Debate', ()=> i ? setBriefPage(i-1) : go(S.started?'debate':'setup'));
+    C = P.length>1 ? dots(P, i, setBriefPage) : h('span');
+    R = i < P.length-1 ? next(P[i+1], ()=>setBriefPage(i+1), {short:'Next'}) : next('Full detail', ()=>go('detail'), {dis:!ready, short:'Detail'});
+  } else {
+    L = back('Brief', ()=>go('brief')); C = h('span',{class:'where'},'Reference');
+    R = h('button',{class:'btn primary',onclick:()=>exportMemo()},'Decision memo');
+  }
+  bar.firstElementChild.replaceChildren(L, C, R);
+}
+function flowStep(dir){
+  if (UI.screen==='welcome') setIntroPage((UI.introPage||0)+dir);
+  else if (UI.screen==='brief') setBriefPage((UI.briefPage||0)+dir);
 }
 
 /* ---------- runtime: inside Claude, or self-hosted ---------- */
@@ -2429,14 +2556,20 @@ const setSide = v => { UI.side=v; $('#sideT').setAttribute('aria-selected',v==='
 $('#sideT').onclick = ()=>setSide('transcript');
 $('#sideS').onclick = ()=>setSide('synthesis');
 try{ new IntersectionObserver(([e])=>{ $('#stickyBar').classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0); }).observe($('#qText')); }catch{}
-$('#tabIntro').onclick = ()=>setView('intro');
-$('#tabSummary').onclick = ()=>setView('summary');
-$('#tabDetail').onclick = ()=>setView('detail');
 $('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Show everything' : 'Key exchanges only'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
 $('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
 $('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
 renderAll();
-{ let seen=null; try{ seen = localStorage.getItem('pt_seenIntro'); }catch{} if (!seen) setView('intro'); }
+{ let seen=null; try{ seen = localStorage.getItem('pt_seenIntro'); }catch{} go(seen ? 'setup' : 'welcome'); }
+document.addEventListener('keydown', e=>{
+  if (e.altKey||e.ctrlKey||e.metaKey||e.defaultPrevented) return;
+  if (e.target.closest('input,textarea,select,[contenteditable],.drawer')) return;
+  if (e.key==='ArrowRight') flowStep(1); else if (e.key==='ArrowLeft') flowStep(-1);
+});
+{ let tx=null, ty=0;
+  $('#screens').addEventListener('touchstart', e=>{ if (e.target.closest('.tscroll,.bnav,input,textarea,select')){ tx=null; return; } tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
+  $('#screens').addEventListener('touchend', e=>{ if (tx==null) return; const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty; tx=null; if (Math.abs(dx)>60 && Math.abs(dy)<45) flowStep(dx<0?1:-1); }, {passive:true});
+}
 </script>
 
 </body>
