@@ -608,6 +608,8 @@ button.ocard:hover{border-color:var(--ink-3)}
 .funchip[aria-checked="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .funtag{font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 9px;background:var(--surface-2)}
 .seg2 button[aria-checked="true"]{background:var(--surface-2);color:var(--ink)}
+.transcript{position:relative}
+.newturns{position:absolute;left:50%;transform:translateX(-50%);bottom:56px;z-index:3;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-size:.8rem;font-weight:600;padding:6px 14px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -648,6 +650,7 @@ button.ocard:hover{border-color:var(--ink-3)}
           <div class="th"><div class="seg2" role="tablist" aria-label="Side view"><button role="tab" id="sideT" aria-selected="true">Transcript</button><button role="tab" id="sideS" aria-selected="false">Synthesis</button></div><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="false">Key exchanges only</button><button class="tgl" id="dlTranscript" title="Download the full transcript and synthesis">↓ Download</button></span></div>
           <p class="simnote">All seats are simulated perspectives, not real people or organizations.</p>
           <div class="tlist" id="tlist" aria-live="polite"></div>
+          <button class="newturns" id="newTurns" type="button" hidden>New turns ↓</button>
           <div class="synth" id="synth" hidden></div>
           <div class="tfoot" id="tfoot"></div>
         </div>
@@ -1968,13 +1971,19 @@ function renderTranscript(){
   $('#synth').hidden = UI.side!=='synthesis';
   if (UI.side==='synthesis') renderSynthesis();
   if (!S.turns.length){ list.replaceChildren(h('p',{class:'empty'},S.started?'Waiting for the first turn…':'The transcript starts when the tabletop begins.')); lastTurnCount=0; renderFoot(); return; }
-  if (S.turns.length < lastTurnCount || lastTurnCount===0) list.replaceChildren();
+  const fresh = S.turns.length < lastTurnCount || lastTurnCount===0;
+  // Follow new turns only when the reader is already at the bottom; never yank them away from what they are reading.
+  const atBottom = fresh || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  if (fresh) list.replaceChildren();
+  let added = 0;
   for (const t of S.turns.slice(lastTurnCount)){
     if (UI.keyOnly && !KEY.has(t.type)) continue;
-    list.append(turnEl(t));
+    list.append(turnEl(t)); added++;
   }
   lastTurnCount = S.turns.length;
-  list.scrollTop = list.scrollHeight;
+  const pill = $('#newTurns');
+  if (added && atBottom){ list.scrollTop = list.scrollHeight; if (pill) pill.hidden = true; UI.unseen = 0; }
+  else if (added && pill){ UI.unseen = (UI.unseen||0) + added; pill.textContent = `${UI.unseen} new turn${UI.unseen>1?'s':''} ↓`; pill.hidden = false; }
   renderFoot();
 }
 function renderSynthesis(){
@@ -3048,6 +3057,8 @@ $('#sideT').onclick = ()=>setSide('transcript');
 $('#sideS').onclick = ()=>setSide('synthesis');
 try{ new IntersectionObserver(([e])=>{ $('#stickyBar').classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0); }).observe($('#qText')); }catch{}
 $('#dlTranscript').onclick = ()=>exportTranscript();
+$('#newTurns').onclick = ()=>{ const l=$('#tlist'); l.scrollTo({top:l.scrollHeight, behavior:'smooth'}); $('#newTurns').hidden=true; UI.unseen=0; };
+$('#tlist').addEventListener('scroll', ()=>{ const l=$('#tlist'); if (l.scrollHeight - l.scrollTop - l.clientHeight < 80){ $('#newTurns').hidden=true; UI.unseen=0; } }, {passive:true});
 $('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Show everything' : 'Key exchanges only'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
 $('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
 $('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
