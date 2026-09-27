@@ -579,7 +579,7 @@ button.ocard:hover{border-color:var(--ink-3)}
       <div class="side">
         <div class="agreebar" id="agreeBanner" role="status" hidden></div>
         <div class="transcript">
-          <div class="th"><div class="seg2" role="tablist" aria-label="Side view"><button role="tab" id="sideT" aria-selected="true">Transcript</button><button role="tab" id="sideS" aria-selected="false">Synthesis</button></div><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="false">Key exchanges only</button></span></div>
+          <div class="th"><div class="seg2" role="tablist" aria-label="Side view"><button role="tab" id="sideT" aria-selected="true">Transcript</button><button role="tab" id="sideS" aria-selected="false">Synthesis</button></div><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="false">Key exchanges only</button><button class="tgl" id="dlTranscript" title="Download the full transcript and synthesis">↓ Download</button></span></div>
           <p class="simnote">All seats are simulated perspectives, not real people or organizations.</p>
           <div class="tlist" id="tlist" aria-live="polite"></div>
           <div class="synth" id="synth" hidden></div>
@@ -1790,6 +1790,7 @@ function turnEl(t){
 function renderTranscript(){
   const list = $('#tlist');
   const shown = UI.keyOnly ? S.turns.filter(t=>KEY.has(t.type)).length : S.turns.length;
+  $('#dlTranscript').hidden = !S.turns.length;
   $('#turnCount').textContent = S.turns.length ? (UI.keyOnly ? `${shown} of ${S.turns.length}` : `${S.turns.length} turns`) : '';
   $('#keyToggle').hidden = UI.side!=='transcript';
   $('#tlist').hidden = UI.side!=='transcript';
@@ -2041,6 +2042,7 @@ function renderSummary(){
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>go('debate')},'← Transcript and synthesis')),
       h('div',{class:'btnrow'},
+        h('button',{class:'btn',onclick:()=>exportTranscript()},'Download transcript'),
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
         h('button',{class:'btn primary',onclick:()=>exportPublic(),title:'A plain-language explanation of the options, what was weighed and the sources, for people outside the room'},'Publish the reasoning'))),
     h('div',{class:'reality'},
@@ -2098,6 +2100,7 @@ function renderRecord(){
     h('div',{class:'btnrow',style:'margin-bottom:12px'},
       h('button',{class:'btn primary',onclick:()=>exportPublic()},'Publish the reasoning (.md)'),
       h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo (.md)'),
+      h('button',{class:'btn',onclick:()=>exportTranscript()},'Transcript (.md)'),
       DL ? h('button',{class:'btn',onclick:()=>save(`decision-record-${day}.md`, buildRecord())},'Full record (.md)') : null,
       DL ? h('button',{class:'btn',onclick:()=>save(`tabletop-session-${day}.json`, sessionJSON())},'Save session (.json)') : null,
       h('label',{class:'btn',for:'loadSession2'},'Load a saved session',h('input',{type:'file',id:'loadSession2',accept:'.json,application/json',hidden:true,onchange:loadSession})),
@@ -2172,6 +2175,49 @@ function buildPublic(){
 async function exportPublic(){
   const md = buildPublic();
   if (DL) return save(`public-reasoning-${new Date().toISOString().slice(0,10)}.md`, md);
+  copyText(md);
+}
+function buildTranscript(){
+  const day = new Date().toISOString().slice(0,10);
+  const seats = inSeats();
+  const L = [];
+  L.push('# Policy Tabletop transcript','');
+  L.push(`**Question:** ${S.question}  `,`**Date:** ${day}  `,`**Session:** ${S.mode==='demo'?'Scripted example':S.runMode==='quick'?'Quick brief':'Full workshop'}, ${S.horizon}-month horizon  `,'**Note:** Every seat is an AI-simulated perspective, not a real person or organization. This rehearsal informs a decision; it does not make one.','');
+  L.push('## Options','',...S.options.map((o,i)=>`${i+1}. **${o.label}**${o.desc?`: ${o.desc}`:''}`),'');
+  L.push('## Who was at the table','');
+  for (const s of seats) L.push(`- **${s.role}** (${GROUPS[s.group].label})${s.perspective?`: ${s.perspective}`:''}${s.sources?.length?`  \n  _Sources it could cite:_ ${s.sources.join('; ')}`:''}`);
+  L.push('','## Discussion','');
+  const stageName = k => (STAGES.find(x=>x[0]===k)||[k,k])[1];
+  let cur = null;
+  for (const t of S.turns){
+    if (t.stage!==cur){ cur=t.stage; L.push(`### ${stageName(cur)}`,''); }
+    const who = speakerInfo(t.seat).name;
+    const kind = TYPE_LABEL[t.type]||t.type;
+    const to = t.target ? ` → ${speakerInfo(t.target).name}` : '';
+    L.push(`**${t.i}. ${who}** · ${kind}${to}  `);
+    if (t.disputes) L.push(`_Disputes:_ “${t.disputes}”  `);
+    L.push(String(t.text||'').trim());
+    if (t.quote) L.push(`> “${t.quote}”  \n> _Verified word for word in ${t.quoteMeta?.item||'the background material'}._`);
+    if (t.seat!=='mod' && t.seat!=='staff' && ['position','challenge','concession','answer','premortem','re-estimate'].includes(t.type)) L.push(t.source ? `_Source: ${t.source}_` : '_No source: reasoning only_');
+    if (t.note) L.push(`_${t.note}_`);
+    L.push('');
+  }
+  if (!S.turns.length) L.push('_No discussion yet._','');
+  // Synthesis, as shown in the Synthesis tab.
+  const contested = S.turns.filter(t=>t.type==='challenge' && t.disputes).map(c=>({by:speakerInfo(c.seat).name, target:c.target?(seatById(c.target)||{}).role||'another seat':'another seat', claim:c.disputes, conceded:S.turns.some(t=>t.i>c.i && t.type==='concession' && t.seat===c.target)}));
+  L.push('## Synthesis','');
+  L.push('**Where people landed**','',S.camps || (S.summary?.discussion) || 'Not summarized.','');
+  L.push('**Points in dispute**','',...(contested.length ? contested.map(c=>`- “${c.claim}”: ${c.by} disputes the ${c.target}. ${c.conceded?'Since agreed or narrowed.':'Still open.'}`) : ['- None recorded.']),'');
+  L.push('**Questions still open**','',...(S.matrix.ku.length ? S.matrix.ku.map(x=>`- ${x.text}${x.where?` (where to look: ${x.where})`:''}`) : ['- None recorded.']),'');
+  if (S.stressTests.length) L.push('**Stress tests**','',...S.stressTests.map(x=>`- **${x.label}:** ${x.summary}`),'');
+  const sourced = S.turns.filter(t=>t.seat!=='mod'&&t.seat!=='staff'&&['position','challenge','concession','answer','premortem'].includes(t.type));
+  if (sourced.length) L.push(`_${sourced.filter(t=>t.source).length} of ${sourced.length} points cite a named source._`,'');
+  return L.join('\n');
+}
+async function exportTranscript(){
+  if (!S.turns.length){ toast('The transcript is empty. Run a session first.'); return; }
+  const md = buildTranscript();
+  if (DL) return save(`tabletop-transcript-${new Date().toISOString().slice(0,10)}.md`, md);
   copyText(md);
 }
 async function exportMemo(){
@@ -2691,6 +2737,7 @@ const setSide = v => { UI.side=v; $('#sideT').setAttribute('aria-selected',v==='
 $('#sideT').onclick = ()=>setSide('transcript');
 $('#sideS').onclick = ()=>setSide('synthesis');
 try{ new IntersectionObserver(([e])=>{ $('#stickyBar').classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0); }).observe($('#qText')); }catch{}
+$('#dlTranscript').onclick = ()=>exportTranscript();
 $('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Show everything' : 'Key exchanges only'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
 $('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
 $('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
