@@ -563,6 +563,38 @@ button.ocard:hover{border-color:var(--ink-3)}
 .second p,.second li{font-size:.88rem}
 .sev{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--ink-3)}
 .sev.high{color:var(--signal)} .sev.medium{color:var(--amber)}
+.landed{display:grid;gap:12px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;margin:-8px 0 22px}
+.trust{display:grid;gap:8px;margin:0 0 6px;max-width:80ch}
+.tline{font-size:.88rem;padding:8px 12px;border-radius:8px;background:var(--surface-2)}
+.tline.warn{background:var(--amber-bg);border:1px solid var(--amber-line)}
+.tline.warn b{color:var(--amber)}
+.tline .sverdict{font-size:.76rem;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--bg);border:1px solid var(--line-2)}
+.morelink{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;font-size:.84rem;font-weight:500;cursor:pointer}
+.takes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:1000px){.takes{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:560px){.takes{grid-template-columns:minmax(0,1fr)}}
+.take{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;align-content:start}
+.take .tkh{display:flex;gap:8px;align-items:center}
+.take .tkh .ic{width:18px;height:18px;color:var(--ink-2)}
+.take.hot .tkh .ic{color:var(--signal)}
+.take p{font-size:.9rem;line-height:1.45}
+.take .morelink{justify-self:start}
+.mindlist{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-width:80ch}
+.mindlist li{display:flex;gap:10px;align-items:flex-start;font-size:.9rem}
+.mindlist .ic{width:18px;height:18px;color:var(--ink-2);margin-top:2px}
+.outlook.compact{max-width:560px}
+.jumps{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 8px;position:sticky;top:0;z-index:4;background:var(--bg);padding:8px 0}
+.jumps button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 11px;font-size:.8rem;color:var(--ink-2)}
+.jumps button:hover{border-color:var(--ink);color:var(--ink)}
+.dsec{scroll-margin-top:60px}
+#analysisPanel,#matrixPanel,#expertPanel,#consultPanel,#recordPanel{scroll-margin-top:60px}
+@media print{
+  .banner,.flowbar,.appbar,.seg,#stickyBar,footer.guard,.es-foot,.toast,.mtabs{display:none!important}
+  body{padding:0}
+  .screen{min-height:0}
+  .takes{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .morelink{display:none}
+}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -613,6 +645,7 @@ button.ocard:hover{border-color:var(--ink-3)}
   <div class="screen" id="scr-brief" hidden><section class="panel es" id="summaryPanel"></section></div>
   <div class="screen" id="scr-detail" hidden>
     <section class="outs" id="outs">
+      <div class="panel span2" id="briefDetailPanel"></div>
       <div class="panel span2" id="analysisPanel"></div>
       <div class="panel span2" id="matrixPanel"></div>
       <div class="panel span2" id="landingPanel"></div>
@@ -1579,7 +1612,7 @@ async function copyText(text){
 /* ---------- render ---------- */
 function renderAll(){
   renderHeader(); renderSummary(); renderSetup(); renderAgreeBanner(); renderTable(); renderSeatCard(); renderTranscript(); renderControls();
-  renderLanding(); renderAnalysis(); renderMatrix(); renderLists(); renderRecord(); renderSticky(); renderFlowbar(); renderAppbar();
+  renderLanding(); renderBriefDetail(); renderAnalysis(); renderMatrix(); renderLists(); renderRecord(); renderSticky(); renderFlowbar(); renderAppbar();
 }
 function renderHeader(){
   $('#modeDemo').setAttribute('aria-pressed', S.mode==='demo'); $('#modeLive').setAttribute('aria-pressed', S.mode==='live');
@@ -1975,7 +2008,7 @@ function positionsTable(){
     stanceKey(seats.some(s=>S.options.some(o=>!S.landing[o.id]?.[s.id]))));
 }
 function renderLanding(){
-  const p = $('#landingPanel');
+  const p = $('#landingPanel'); p.hidden = true; return;
   const head = h('div',{class:'panel-head'},h('h2',{},'Where the simulated perspectives landed'),h('span',{class:'small muted'},'Not stakeholder positions. Test each with the real people.'));
   if (!Object.keys(S.landing).length){ p.replaceChildren(head, h('p',{class:'empty'},'Filled in after round 3.')); return; }
   const seats = inSeats(); const lead = leadingOption();
@@ -2071,84 +2104,102 @@ function renderSummary(){
     return;
   }
   p.hidden = false;
+  UI.briefPages = []; UI.briefPage = 0;
   const t = targetOption();
   const prep = prepareData();
   const warn = consensusWarnings();
-  const list = (items, empty, ordered) => items.length ? h(ordered?'ol':'ul',{},...items.map(x=>h('li',{},x))) : h('p',{class:'muted'},empty);
-  const block = (label, kids, cls) => h('div',{class:'es-block'+(cls?' '+cls:'')},h('div',{class:'label'},label),...[].concat(kids));
-  const pcard = (ic, label, n, body, hot) => h('div',{class:'pc'+(hot?' hot':'')},h('div',{class:'pch'},icon(ic),h('span',{class:'label'},label),n?h('span',{class:'cnt'},String(n)):null),body);
   const rows = tensionRows();
-  const levers = {}; rows.filter(r=>r.lever).forEach(r=>{ (levers[r.type||'process'] ||= []).push(r); });
-  const stanceWord = v => ({support:'Supports',conditional:'With conditions',oppose:'Opposes'})[v]||'—';
+  const lev = rows.filter(r=>r.lever);
   const hasLand = Object.keys(S.landing).length>0;
-  const pages = [
-    ['Overview', [
+  const so = S.secondOpinion || (S.mode==='demo' ? DEMO_SECOND : null);
+  const more = (n, id) => n>0 ? h('button',{class:'morelink',onclick:()=>jumpDetail(id)},`+${n} more`) : null;
+  const take = (ic, label, text, who, n, id, hot) => h('div',{class:'take'+(hot?' hot':'')},
+    h('div',{class:'tkh'},icon(ic),h('span',{class:'label'},label)),
+    text ? h('p',{},who?h('b',{},who+': '):null,oneLine(text)) : h('p',{class:'muted'},'None flagged.'),
+    more(n, id));
+  p.replaceChildren(...[
+    h('div',{class:'es-head'},h('span',{class:'label'},'Executive brief'),h('span',{class:'stamp'},'Simulated · informs, does not decide')),
     h('h2',{class:'es-headline'},d.headline),
+    hasLand ? h('section',{class:'landed'},h('div',{class:'label'},'Where the seats landed'),stanceBars(),stanceKey()) : null,
     d.discussion ? h('p',{class:'es-lede'},d.discussion) : null,
-    warn.length ? h('div',{class:'alert',role:'note'},h('b',{},'Be careful. '),warn.join(' '),' Simulated seats agree more than real people usually do.',
-      S.stressTests.some(x=>x.kind==='opposing') ? null : h('div',{style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>runConstraint('opposing')},'Stress-test with opposing constraints'))) : null,
-    secondCard(),
-    modelLine() ? h('p',{class:'small muted',style:'margin:-10px 0 20px'},modelLine()) : null,
-
-    Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Where the seats landed') : null,
-    Object.keys(S.landing).length ? stanceBars() : null,
-    Object.keys(S.landing).length ? stanceKey() : null
-    ]],
-    ['Prepare', [
+    (warn.length || so) ? h('div',{class:'trust'},
+      warn.length ? h('div',{class:'tline warn'},h('b',{},'Be careful. '),warn[0],' ',
+        S.stressTests.some(x=>x.kind==='opposing') ? null : h('button',{class:'morelink',onclick:()=>runConstraint('opposing')},'Stress-test with opposing constraints')) : null,
+      so ? h('div',{class:'tline'},h('b',{},'Second opinion: '),h('span',{class:'sverdict'},so.verdict==='fair'?'Fair':so.verdict==='misleading'?'Misleading in places':'Mostly fair'),' ',so.summary||'',' ',h('button',{class:'morelink',onclick:()=>jumpDetail('sec-second')},'Details')) : null) : null,
     h('h3',{class:'es-section'},'Prepare for the room'),
-    h('div',{class:'prep'},
-      pcard('target', 'Hardest objections', prep.objections.length, prep.objections.length ? h('ol',{},...prep.objections.map(o=>h('li',{},o.who?h('b',{},o.who+': '):null,o.what))) : h('p',{class:'muted'},'No strong objections surfaced.'), true),
-      pcard('against', t ? `Case against ${lc(t.label)}` : 'Case against', null, h('p',{},prep.caseAgainst || 'Not captured in this session.'), true),
-      pcard('question', 'Can’t answer yet', prep.unanswered.length, list(prep.unanswered,'None flagged.')),
-      pcard('addseat', 'Missing from the room', prep.missing.length, list(prep.missing,'No gaps flagged.')))
-    ]],
-    Object.keys(levers).length ? ['Change minds', [
-    Object.keys(levers).length ? h('h3',{class:'es-section'},'What would change their mind') : null,
-    Object.keys(levers).length ? h('div',{class:'levers'},...Object.entries(LEVER_TYPES).filter(([k])=>levers[k]).map(([k,l])=>h('div',{class:'lever'},
-      h('div',{class:'lh'},icon(LEVER_ICON[k]),h('span',{class:'label'},l)),
-      h('ul',{class:'plain'},...levers[k].map(r=>h('li',{},r.lever,h('span',{class:'where'},r.seat.role))))))) : null
-    ]] : null,
-    hasLand ? ['Seat by seat', [
-    Object.keys(S.landing).length ? h('h3',{class:'es-section'},'Seat by seat') : null,
-    Object.keys(S.landing).length ? positionsTable() : null,
-    rows.length ? h('div',{style:'margin-top:18px'},det('tension', `Stakeholder tension table${t?` on ${lc(t.label)}`:''} · ${rows.length} seats`,
-      h('div',{class:'tscroll'},h('table',{class:'grid tension','aria-label':'Stakeholder tension matrix'},
-        h('thead',{},h('tr',{},h('th',{},'Seat'),h('th',{},'Stance'),h('th',{},'Friction and non-negotiables'),h('th',{},'What would move them'))),
-        h('tbody',{},...rows.map(r=>h('tr',{},
-          h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[r.seat.group].color}`}),r.seat.role)),
-          h('td',{},stanceEl(r.stance)),
-          h('td',{},r.friction, r.nonneg?h('div',{class:'small muted'},'Non-negotiable: ',r.nonneg):null),
-          h('td',{},r.lever||'—')))))),
-      h('div',{class:'btnrow',style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>copyText(tensionMarkdown())},'Copy table as Markdown')))) : null
-    ]] : null,
-    ['Outlook', [h('h3',{class:'es-section'},'Outlook and what they agreed on'),
-    S.stressTests.length ? h('h3',{class:'es-section'},'Stress tests') : null,
-    S.stressTests.length ? h('ul',{class:'plain'},...S.stressTests.map(x=>h('li',{},h('b',{},x.label+': '),x.summary))) : null,
-
-    h('div',{class:'es-grid',style:'margin-top:8px'},
-      block('Where they agreed', list(d.agreed,'No clear agreement.')),
-      d.risks.length ? block(`Risk outlook, next ${S.horizon} months`, h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},levelMeter(x.d.level),x.d.level),
-        S.revealed.r3 ? h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`) : h('span',{}),
-        h('span',{class:'oagree'},x.d.agree))))) : block('Where they disagreed', list(d.disputed,'No open disagreements.'))),
-
+    h('div',{class:'takes'},
+      take('target','Hardest objection', prep.objections[0]?.what, prep.objections[0]?.who, prep.objections.length-1, 'sec-prepare', true),
+      take('against', t ? `Case against ${lc(t.label)}` : 'Case against', prep.caseAgainst, '', 0, 'sec-prepare', true),
+      take('question','Can’t answer yet', prep.unanswered[0], '', prep.unanswered.length-1, 'sec-prepare'),
+      take('addseat','Missing from the room', prep.missing[0], '', prep.missing.length-1, 'sec-prepare')),
+    lev.length ? h('h3',{class:'es-section'},'What would change their mind') : null,
+    lev.length ? h('ul',{class:'mindlist'},...lev.slice(0,3).map(r=>h('li',{},icon(LEVER_ICON[r.type]||'process'),h('span',{},h('b',{},r.seat.role+': '),oneLine(r.lever))))) : null,
+    lev.length>3 ? more(lev.length-3,'sec-minds') : null,
+    d.risks.length ? h('h3',{class:'es-section'},`Risks to watch, next ${S.horizon} months`) : null,
+    d.risks.length ? h('div',{class:'outlook compact'},...d.risks.slice(0,3).map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},levelMeter(x.d.level),x.d.level),
+      S.revealed.r3 ? h('span',{class:`otrend ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`) : h('span',{})))) : null,
+    d.risks.length>3 ? more(d.risks.length-3,'sec-risks') : null,
     h('div',{class:'es-foot'},
       h('div',{class:'btnrow'},
-        h('button',{class:'btn',onclick:()=>go('debate')},'← Transcript and synthesis')),
+        h('button',{class:'btn',onclick:()=>go('detail')},'Everything else in Detail →'),
+        h('button',{class:'btn',onclick:()=>window.print()},'Print one page')),
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>exportTranscript()},'Download transcript'),
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
         h('button',{class:'btn primary',onclick:()=>exportPublic(),title:'A plain-language explanation of the options, what was weighed and the sources, for people outside the room'},'Publish the reasoning'))),
+    modelLine() ? h('p',{class:'small muted',style:'margin-top:14px'},modelLine()) : null
+  ].filter(Boolean));
+}
+function oneLine(x, max=170){ const t=String(x||'').trim(); const first = (t.match(/^.*?[.!?](\s|$)/)||[t])[0].trim(); const out = first.length>=40 ? first : t; return out.length>max ? out.slice(0,max-1).replace(/\s+\S*$/,'')+'…' : out; }
+function jumpDetail(id){ go('detail'); setTimeout(()=>{ const el=document.getElementById(id); if (el) el.scrollIntoView({behavior:'smooth',block:'start'}); },60); }
+function renderBriefDetail(){
+  const p = $('#briefDetailPanel'); if (!p) return;
+  const d = (S.summary || Object.keys(S.landing).length) ? summaryData() : null;
+  if (!d){ p.replaceChildren(h('div',{class:'panel-head'},h('h2',{},'The full brief')),h('p',{class:'empty'},'Filled in at the end of the session.')); return; }
+  const t = targetOption(); const prep = prepareData(); const rows = tensionRows();
+  const levers = {}; rows.filter(r=>r.lever).forEach(r=>{ (levers[r.type||'process'] ||= []).push(r); });
+  const list = (items, empty) => items.length ? h('ul',{},...items.map(x=>h('li',{},x))) : h('p',{class:'muted'},empty);
+  const pcard = (ic, label, n, body, hot) => h('div',{class:'pc'+(hot?' hot':'')},h('div',{class:'pch'},icon(ic),h('span',{class:'label'},label),n?h('span',{class:'cnt'},String(n)):null),body);
+  const sec = (id, title, ...kids) => h('section',{class:'dsec',id},h('h3',{class:'es-section'},title),...kids);
+  const jumps = [['sec-prepare','Prepare'],['sec-minds','Change minds'],['sec-seats','Seat by seat'],['sec-agree','Agreement'],['sec-risks','Risks'],['sec-second','Second opinion'],['analysisPanel','Options'],['matrixPanel','Knowns and unknowns'],['expertPanel','Experts'],['recordPanel','Record']];
+  const so = S.secondOpinion || (S.mode==='demo' ? DEMO_SECOND : null);
+  p.replaceChildren(...[
+    h('div',{class:'panel-head'},h('h2',{},'The full brief'),h('span',{class:'small muted'},'Everything behind the one-page summary.')),
+    h('nav',{class:'jumps','aria-label':'Jump to section'},...jumps.map(([id,l])=>h('button',{onclick:()=>{ const el=document.getElementById(id); if (el) el.scrollIntoView({behavior:'smooth',block:'start'}); }},l))),
+    sec('sec-prepare','Prepare for the room', h('div',{class:'prep'},
+      pcard('target','Hardest objections', prep.objections.length, prep.objections.length ? h('ol',{},...prep.objections.map(o=>h('li',{},o.who?h('b',{},o.who+': '):null,o.what))) : h('p',{class:'muted'},'No strong objections surfaced.'), true),
+      pcard('against', t ? `Case against ${lc(t.label)}` : 'Case against', null, h('p',{},prep.caseAgainst || 'Not captured in this session.'), true),
+      pcard('question','Can’t answer yet', prep.unanswered.length, list(prep.unanswered,'None flagged.')),
+      pcard('addseat','Missing from the room', prep.missing.length, list(prep.missing,'No gaps flagged.')))),
+    Object.keys(levers).length ? sec('sec-minds','What would change their mind', h('div',{class:'levers'},...Object.entries(LEVER_TYPES).filter(([k])=>levers[k]).map(([k,l])=>h('div',{class:'lever'},
+      h('div',{class:'lh'},icon(LEVER_ICON[k]),h('span',{class:'label'},l)),
+      h('ul',{class:'plain'},...levers[k].map(r=>h('li',{},r.lever,h('span',{class:'where'},r.seat.role)))))))) : null,
+    Object.keys(S.landing).length ? sec('sec-seats','Seat by seat', positionsTable(),
+      Object.keys(S.conditions||{}).length ? h('div',{style:'margin-top:14px'},h('div',{class:'label'},'Conditions attached'),h('ul',{class:'plain'},...S.options.filter(o=>S.conditions[o.id]).map(o=>h('li',{},h('b',{},o.label+': '),S.conditions[o.id])))) : null,
+      rows.length ? h('div',{style:'margin-top:18px'},det('tension', `Stakeholder tension table${t?` on ${lc(t.label)}`:''} · ${rows.length} seats`,
+        h('div',{class:'tscroll'},h('table',{class:'grid tension','aria-label':'Stakeholder tension matrix'},
+          h('thead',{},h('tr',{},h('th',{},'Seat'),h('th',{},'Stance'),h('th',{},'Friction and non-negotiables'),h('th',{},'What would move them'))),
+          h('tbody',{},...rows.map(r=>h('tr',{},
+            h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[r.seat.group].color}`}),r.seat.role)),
+            h('td',{},stanceEl(r.stance)),
+            h('td',{},r.friction, r.nonneg?h('div',{class:'small muted'},'Non-negotiable: ',r.nonneg):null),
+            h('td',{},r.lever||'—')))))),
+        h('div',{class:'btnrow',style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>copyText(tensionMarkdown())},'Copy table as Markdown')))) : null) : null,
+    sec('sec-agree','Agreement and dispute', h('div',{class:'es-grid'},
+      h('div',{class:'es-block'},h('div',{class:'label'},'Where they agreed'),list(d.agreed,'No clear agreement.')),
+      h('div',{class:'es-block'},h('div',{class:'label'},'Where they disagreed'),list(d.disputed,'No open disagreements.')),
+      d.changed.length ? h('div',{class:'es-block'},h('div',{class:'label'},'What changed minds'),list(d.changed,'')) : null,
+      d.overlooked.length ? h('div',{class:'es-block'},h('div',{class:'label'},'Nearly missed'),list(d.overlooked,'')) : null)),
+    d.risks.length ? sec('sec-risks',`Risk outlook, next ${S.horizon} months`, h('div',{class:'outlook',style:'max-width:640px'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},levelMeter(x.d.level),x.d.level),
+      S.revealed.r3 ? h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`) : h('span',{}),
+      h('span',{class:'oagree'},x.d.agree))))) : null,
+    so ? sec('sec-second','Second opinion', secondCard(), modelLine() ? h('p',{class:'small muted'},modelLine()) : null) : null,
+    S.stressTests.length ? sec('sec-stress','Stress tests', h('ul',{class:'plain'},...S.stressTests.map(x=>h('li',{},h('b',{},x.label+': '),x.summary)))) : null,
     h('div',{class:'reality'},
       h('span',{class:'small'},'After your real meeting: did this rehearsal surface what actually came up?'),
       h('div',{class:'btnrow'},...[['yes','Yes'],['partly','Partly'],['no','No']].map(([v,l])=>h('button',{class:'pill','aria-pressed':S.reality.answer===v,onclick:()=>setReality(v)},l)),
         S.reality.answer ? h('input',{type:'text',id:'realityNote','aria-label':'What it missed or got right',placeholder:'What it missed or got right',value:S.reality.note,oninput:e=>{S.reality.note=e.target.value;renderRecord();}}) : null))
-    ]]
-  ].filter(Boolean);
-  UI.briefPages = pages.map(x=>x[0]);
-  UI.briefPage = Math.min(UI.briefPage||0, pages.length-1);
-  p.replaceChildren(head,
-    h('nav',{class:'bnav','aria-label':'Brief sections'},...pages.map(([t],i)=>h('button',{'aria-current':String(i===UI.briefPage),onclick:()=>setBriefPage(i)},t))),
-    ...pages.map(([t,kids],i)=>h('div',{class:'bpage',hidden:i!==UI.briefPage,'aria-label':t},...kids.filter(Boolean))));
+  ].filter(Boolean));
 }
 function renderMatrix(){
   const q = (title,sub,list,whereLabel,extra) => h('div',{class:'quad'},
@@ -2588,7 +2639,7 @@ function prepareData(){
   if (!missing.length) missing = inSeats().filter(s=>s.group==='absent').map(s=>`${s.role.replace(/\s*\(absent voice\)/i,'')}: only simulated here, so hear from them directly.`);
   return { objections, caseAgainst, unanswered, missing };
 }
-function setReality(ans){ S.reality.answer = ans; renderSummary(); renderRecord(); }
+function setReality(ans){ S.reality.answer = ans; renderBriefDetail(); renderRecord(); }
 
 /* ---------- icons and the intro view ---------- */
 const ICONS = {
