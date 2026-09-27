@@ -33,6 +33,14 @@ Free models are shared and often busy, which makes sessions slow. The server now
 - **Inside Claude.** The Claude-hosted version runs live sessions on each viewer's own Claude plan, with no API key needed.
 - **Your organization's hosting.** `api/claude.js` is a small Node function. It can be adapted for Azure Functions, AWS Lambda or an internal server behind your organization's sign-in.
 
+## Privacy
+
+- **Nothing is stored on the server.** It has no database and does not log prompts. Documents (PDF, Word, text) are converted to text inside the browser; the files are never uploaded.
+- **Personal details are removed before sending** (emails, phone numbers, ID, tax and account numbers, street addresses), and the setup screen shows exactly what will be sent. Names are not removed automatically; check the preview.
+- **Private mode** sends requests only to OpenRouter hosts with zero data retention that do not collect or train on prompts (`provider.zdr` and `data_collection: "deny"`). It turns on automatically when background material is added, never falls back to free models or Claude, and needs OpenRouter credit. Change its models with `OPENROUTER_PRIVATE_MODEL`.
+- **Clear everything** erases the session, background material and any saved key from the browser.
+- For stricter requirements, host the tool yourself and point it at a model service your organization already approves.
+
 ## Before staff use it with real matters
 
 - **Data:** live sessions send the question, background notes and transcript to the model provider you choose (OpenRouter and its model hosts, or Anthropic). Confirm this fits your data rules.

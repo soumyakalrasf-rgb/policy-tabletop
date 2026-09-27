@@ -542,6 +542,14 @@ button.ocard:hover{border-color:var(--ink-3)}
 }
 .forwho{display:flex;gap:10px;align-items:flex-start;margin-top:18px;padding:10px 14px;border-left:2px solid var(--signal);background:var(--surface-2);border-radius:0 8px 8px 0;font-size:.92rem;max-width:46ch}
 .forwho .ic{width:18px;height:18px;margin-top:2px;color:var(--ink-2)}
+.privacy{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:6px;background:var(--surface-2)}
+.privhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.privhead .ic{width:18px;height:18px;color:var(--ink-2)}
+.privhead b{flex:1;font-size:.9rem}
+.privacy p{font-size:.84rem;color:var(--ink-2)}
+.privpill{border:1px solid var(--line-2);background:var(--bg);border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:600;color:var(--ink-2)}
+.privpill[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.sendprev{max-height:260px;overflow:auto;white-space:pre-wrap;font-family:var(--mono);font-size:.76rem;background:var(--surface-2);border-radius:8px;padding:10px 12px;margin:6px 0 0;color:var(--ink-2)}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -610,7 +618,7 @@ button.ocard:hover{border-color:var(--ink-3)}
       <li>Seats are roles, never named individuals. They cite only their listed sources; anything else is flagged "No source: reasoning only."</li>
       <li>Seats built on one model tend to agree. Low disagreement is flagged as a warning, not treated as confidence.</li>
       <li>Get consent before recording any meeting audio, and check with legal counsel how records and open-meetings laws treat transcripts and outputs from this tool.</li>
-      <li>Live sessions send the question, context and transcript to Claude on the viewer's own account. Do not paste confidential material you are not permitted to share that way.</li>
+      <li>Live sessions send the question, your background text (with personal details removed, unless you turn that off) and the transcript to an AI model. Nothing is stored on this site’s server. Private mode uses only hosts that keep no data. Do not add material you are not permitted to share this way.</li>
     </ul>
     </details>
   </footer>
@@ -621,7 +629,7 @@ button.ocard:hover{border-color:var(--ink-3)}
 <script>
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-var UI = {view:'summary', screen:'setup', setupPage:0, introPage:0, briefPage:0, briefPages:[], readyNoted:false, open:{}, keyOnly:false, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
+var UI = {privateMode:false, privateTouched:false, privateAvail:false, redact:true, view:'summary', screen:'setup', setupPage:0, introPage:0, briefPage:0, briefPages:[], readyNoted:false, open:{}, keyOnly:false, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs||{})){
@@ -932,6 +940,8 @@ const ERR = {
   bad_key:'Anthropic rejected that API key. Check it and connect again.',
   bad_pass:'The passcode was rejected. Unlock live sessions again.',
   all_busy:'Every free model was busy or gave an unreadable reply. Press Retry in a minute. Adding an Anthropic key to the site as a last resort stops this from happening.',
+  private_unavailable:'Private mode isn’t available right now: it needs a paid, zero-data-retention host. Turn Private mode off to continue, or try later.',
+  private_busy:'No private (zero-data-retention) host answered. Press Retry, or turn Private mode off.',
   daily_cap:'The free daily limit on OpenRouter is used up (50 requests a day on accounts without credit). It resets at midnight UTC. Adding $10 of OpenRouter credit raises it to 1,000 a day.'
 };
 const errCopy = e => ERR[e?.code] || 'Claude could not finish this step. Retry when ready.';
@@ -1120,7 +1130,8 @@ function ensureKeySeats(){
   S.seats.forEach((x,i)=>{ x.id = 's'+(i+1); });
 }
 async function draftSetup(){
-  const q = $('#liveQ').value.trim(); if (!q){ toast('Enter the policy question first.'); return; }
+  let q = $('#liveQ').value.trim(); if (!q){ toast('Enter the policy question first.'); return; }
+  if (UI.redact){ const r = redactText(q); if (Object.keys(r.counts).length){ q = r.text; $('#liveQ').value = q; toast(`Removed ${countWords(r.counts)} from your question before sending.`); } }
   S.rawQuestion = q; rebuildContext(); S.decisionType = $('#liveType').value; S.horizon = Number($('#liveHorizon').value)||12;
   S.reviewDate = addMonths(S.horizon);
   busy('Drafting setup…'); renderSetup();
@@ -1573,7 +1584,8 @@ function intakeBlock(){
     CAN_MIC
       ? h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Speaking works too. '),'Your browser’s speech service turns it into text you can edit. Get consent before recording anyone else.'))
       : h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Prefer to talk? '),'Use your device’s dictation in the box: the mic on a phone keyboard, Windows key + H, or Fn twice on a Mac.')),
-    det('ctx','Add background (optional): rules, data and public input', contextBlock()),
+    privacyStrip(),
+    det('ctx','Add background (optional): documents, rules, data and public input', contextBlock()),
     h('div',{class:'field'},h('span',{class:'label',style:'margin-bottom:4px;display:block'},'How much time do you have?'),
       h('div',{class:'modepick',role:'radiogroup','aria-label':'Session length'},
         ...[['quick','Quick brief','About a minute. Six seats give their views and push back, then you get the brief.'],['workshop','Full workshop','Three rounds with up to twelve seats. You can steer the discussion as it runs.']].map(([v,l,d])=>
@@ -2104,7 +2116,8 @@ function renderRecord(){
       DL ? h('button',{class:'btn',onclick:()=>save(`decision-record-${day}.md`, buildRecord())},'Full record (.md)') : null,
       DL ? h('button',{class:'btn',onclick:()=>save(`tabletop-session-${day}.json`, sessionJSON())},'Save session (.json)') : null,
       h('label',{class:'btn',for:'loadSession2'},'Load a saved session',h('input',{type:'file',id:'loadSession2',accept:'.json,application/json',hidden:true,onchange:loadSession})),
-      h('button',{class:'btn',onclick:()=>copyText(buildRecord())},'Copy record')),
+      h('button',{class:'btn',onclick:()=>copyText(buildRecord())},'Copy record'),
+      h('button',{class:'btn',onclick:clearEverything},'Clear everything')),
     h('pre',{id:'recordPre'},md),
     h('p',{class:'small muted',style:'margin-top:10px'},'Save the session to come back to it later. Loading it restores everything.')
   );
@@ -2247,14 +2260,65 @@ const AUTH = {
   empirical:{label:'Empirical data', status:'Empirical record', hint:'Audits, budgets, reports, data'},
   public:{label:'Public input', status:'Public sentiment', hint:'Comments, meeting transcripts, surveys'}
 };
+/* ---------- privacy: remove personal details, private mode, clear everything ---------- */
+const REDACT = [
+  ['email', /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email removed]'],
+  ['ID number', /\b\d{3}-\d{2}-\d{4}\b/g, '[ID number removed]'],
+  ['tax ID', /\b\d{2}-\d{7}\b/g, '[tax ID removed]'],
+  ['card or account number', /\b(?:\d[ -]?){12,18}\d\b/g, '[number removed]'],
+  ['phone number', /(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)|\b\d{2,4})[\s.-]\d{3,4}[\s.-]\d{3,4}\b/g, '[phone removed]'],
+  ['street address', /\b\d{1,5}\s+(?:[A-Z][A-Za-z]+\s){1,3}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Place|Pl|Terrace|Parkway|Pkwy|Highway|Hwy)\b\.?/g, '[address removed]']
+];
+function redactText(t){
+  const counts = {}; let out = String(t||'');
+  for (const [k,re,rep] of REDACT) out = out.replace(re, ()=>{ counts[k]=(counts[k]||0)+1; return rep; });
+  return {text:out, counts};
+}
+const countWords = c => Object.entries(c).map(([k,n])=>`${n} ${k}${n>1?(k.endsWith('s')?'':'s'):''}`).join(', ');
+const CTX_LIMIT = 9000; // the prompts use at most this much background text
+function privateAvailable(){ return !(window.claude && window.claude.use) && ((UI.server && UI.privateAvail) || (UI.keyMode && UI.keyProvider==='openrouter')); }
 function rebuildContext(){
-  S.context = S.contextItems.filter(x=>x.text.trim()).map(x=>`[${AUTH[x.type].label.toUpperCase()}: ${x.name||'Untitled'}]\n${x.text.trim()}`).join('\n\n');
+  for (const x of S.contextItems){ const r = UI.redact ? redactText(x.text) : {text:x.text, counts:{}}; x.sent = r.text; x.removed = r.counts; }
+  S.context = S.contextItems.filter(x=>x.text.trim()).map(x=>`[${AUTH[x.type].label.toUpperCase()}: ${x.name||'Untitled'}]\n${x.sent.trim()}`).join('\n\n');
+  if (S.context && !UI.privateTouched && privateAvailable()) UI.privateMode = true;
+  syncPrivacyUI();
+}
+function syncPrivacyUI(){
+  const pv = document.getElementById('sendPrev');
+  if (pv){ pv.textContent = S.context ? S.context.slice(0,CTX_LIMIT) : 'Nothing yet. Add background above.'; }
+  const pl = document.getElementById('sendLen');
+  if (pl){ const n=S.context.length; pl.textContent = n ? `${Math.min(n,CTX_LIMIT).toLocaleString()} characters${n>CTX_LIMIT?` (the first ${CTX_LIMIT.toLocaleString()} of ${n.toLocaleString()}; put the most important material first)`:''}` : ''; }
+  const rn = document.getElementById('redactNote');
+  if (rn){ const tot={}; for (const x of S.contextItems) for (const [k,n] of Object.entries(x.removed||{})) tot[k]=(tot[k]||0)+n; rn.textContent = UI.redact ? (Object.keys(tot).length ? `Removed so far: ${countWords(tot)}.` : 'Nothing found to remove so far.') : 'Personal details will be sent as written.'; }
+  document.querySelectorAll('.privpill').forEach(b=>{ b.setAttribute('aria-pressed', String(!!UI.privateMode)); b.querySelector('.pv').textContent = UI.privateMode ? 'On' : 'Off'; });
+}
+function togglePrivate(){ UI.privateMode = !UI.privateMode; UI.privateTouched = true; syncPrivacyUI(); toast(UI.privateMode ? 'Private mode on: only AI hosts that keep nothing.' : 'Private mode off.'); }
+function privacyStrip(){
+  const avail = privateAvailable();
+  return h('div',{class:'privacy'},
+    h('div',{class:'privhead'},icon('against'),h('b',{},'Your material stays yours'),
+      avail ? h('button',{class:'privpill',type:'button','aria-pressed':String(!!UI.privateMode),onclick:togglePrivate,title:'Only use AI hosts with zero data retention that never train on prompts'},'Private mode: ',h('span',{class:'pv'},UI.privateMode?'On':'Off')) : null),
+    h('p',{},'Files are read in this browser. Nothing is saved on this site’s server. Only the text shown under “What will be sent” goes to the AI model, and closing the tab erases the session.',
+      avail ? ' Private mode sends it only to hosts that keep no data; it turns on by itself when you add background.' : ((!(window.claude && window.claude.use)) ? '' : ' Here it runs on your own Claude account, under your Claude privacy settings.')),
+    h('div',{class:'btnrow'},h('button',{class:'linkbtn small',type:'button',onclick:clearEverything},'Clear everything')));
+}
+function clearEverything(){
+  if (!confirm('Erase this session, your background material and any saved key from this browser?')) return;
+  pause();
+  const mode = S.mode;
+  if (UI.keyMode){ UI.apiKey=''; UI.keyMode=false; SAMPLE=null; }
+  try{ sessionStorage.removeItem('pt_key'); sessionStorage.removeItem('pt_prov'); }catch{}
+  document.querySelectorAll('input[type=file]').forEach(x=>x.value='');
+  S = freshState(mode); UI.setupPage=0; UI.briefPage=0; UI.privateTouched=false; UI.privateMode=false; UI.open={};
+  renderAll(); go('setup'); toast('Cleared. Nothing from that session remains in this browser.');
 }
 function addContextItem(item){ S.contextItems.push({type:'empirical', name:'', text:'', ...item}); rebuildContext(); }
 function contextBlock(){
   if (!S.contextItems.length) addContextItem({});
   return h('div',{class:'ctxlist'},
-    h('p',{class:'small muted'},'Tag each item so the seats weigh it properly: binding constraints first, then data, then public input.'),
+    h('p',{class:'small muted'},'Tag each item so the seats weigh it properly: binding constraints first, then data, then public input. PDF and Word files are read in this browser.'),
+    h('label',{class:'small',style:'display:flex;gap:8px;align-items:center'},h('input',{type:'checkbox',checked:UI.redact,onchange:e=>{UI.redact=e.target.checked;rebuildContext();}}),h('span',{},h('b',{},'Remove personal details before sending'),' (emails, phone numbers, ID and account numbers, street addresses)')),
+    h('p',{class:'small muted',id:'redactNote'}),
     ...S.contextItems.map((it,i)=>h('div',{class:'ctxitem'},
       h('div',{class:'ctxrow'},
         h('select',{id:`ctxType${i}`,'aria-label':'Authority type',onchange:e=>{it.type=e.target.value;rebuildContext();}},...Object.entries(AUTH).map(([k,a])=>h('option',{value:k,selected:it.type===k},a.label))),
@@ -2264,15 +2328,36 @@ function contextBlock(){
       h('textarea',{id:`ctxText${i}`,rows:4,'aria-label':'Text of this source',placeholder:'Paste the text, notes or a transcript.',oninput:e=>{it.text=e.target.value;rebuildContext();}},it.text))),
     h('div',{class:'btnrow'},
       h('button',{class:'btn',type:'button',onclick:()=>{addContextItem({});renderSetupForce();}},'+ Add another source'),
-      h('label',{class:'btn',for:'ctxFile'},'Add text files',h('input',{id:'ctxFile',type:'file',hidden:true,multiple:true,accept:'.txt,.md,.csv,text/plain,text/markdown,text/csv',onchange:readCtxFiles})))
+      h('label',{class:'btn',for:'ctxFile'},'Add files (PDF, Word, text)',h('input',{id:'ctxFile',type:'file',hidden:true,multiple:true,accept:'.pdf,.docx,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv',onchange:readCtxFiles}))),
+    det('sendprev','What will be sent to the AI model', h('p',{class:'small muted',id:'sendLen'}), h('pre',{class:'sendprev',id:'sendPrev'}))
   );
+}
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.append(s); }); }
+// Documents are converted to text here in the browser; the file itself is never uploaded anywhere.
+async function fileText(f){
+  const ext = (f.name.split('.').pop()||'').toLowerCase();
+  if (ext==='pdf'){
+    if (!window.pdfjsLib){ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'); window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }
+    const pdf = await window.pdfjsLib.getDocument({data: new Uint8Array(await f.arrayBuffer())}).promise;
+    const pages = [];
+    for (let i=1;i<=pdf.numPages;i++){ const c = await (await pdf.getPage(i)).getTextContent(); pages.push(c.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('')); }
+    return pages.join('\n\n');
+  }
+  if (ext==='docx'){
+    if (!window.mammoth) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+    return (await window.mammoth.extractRawText({arrayBuffer: await f.arrayBuffer()})).value;
+  }
+  return f.text();
 }
 function readCtxFiles(e){
   const files=[...e.target.files]; if (!files.length) return;
-  Promise.all(files.map(f=>f.text().then(t=>({name:f.name.replace(/\.[^.]+$/,''), text:t})))).then(parts=>{
+  toast(`Reading ${files.length} file${files.length>1?'s':''} in your browser…`);
+  Promise.all(files.map(f=>fileText(f).then(t=>({name:f.name.replace(/\.[^.]+$/,''), text:String(t||'').replace(/[ \t]+\n/g,'\n').trim()})).catch(()=>({name:f.name, text:'', failed:true})))).then(parts=>{
     S.contextItems = S.contextItems.filter(x=>x.text.trim()||x.name.trim());
-    parts.forEach(p=>addContextItem({type:'empirical', ...p}));
-    renderSetupForce(); toast(`Added ${files.length} file${files.length>1?'s':''}. Check each one's tag.`);
+    parts.filter(p=>!p.failed && p.text).forEach(p=>addContextItem({type:'empirical', name:p.name, text:p.text}));
+    const bad = parts.filter(p=>p.failed || !p.text).map(p=>p.name);
+    UI.open.sendprev = true; renderSetupForce(); syncPrivacyUI();
+    toast(bad.length ? `Couldn’t read ${bad.join(', ')}. Scanned PDFs have no text; paste the text instead.` : `Added ${parts.length} file${parts.length>1?'s':''}. Check each one's tag and what will be sent.`);
   });
   e.target.value='';
 }
@@ -2282,8 +2367,9 @@ function findQuote(q){
   const norm = x=>String(x).toLowerCase().replace(/[“”"']/g,'').replace(/\s+/g,' ').trim();
   const nq = norm(q); if (nq.length<12) return null;
   for (const it of S.contextItems){
-    if (!norm(it.text).includes(nq)) continue;
-    const raw = it.text, lower = raw.toLowerCase().replace(/\s+/g,' ');
+    const src = it.sent ?? it.text;
+    if (!norm(src).includes(nq)) continue;
+    const raw = src, lower = raw.toLowerCase().replace(/\s+/g,' ');
     const at = lower.indexOf(nq.slice(0,24));
     const window = at>=0 ? raw.replace(/\s+/g,' ').slice(Math.max(0,at-220), at+nq.length+220) : raw.slice(0,600);
     return {item:it.name||'Untitled', type:it.type, window};
@@ -2634,7 +2720,7 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 async function apiJson(input, opts={}){
   for (let attempt=0; attempt<2; attempt++){
     let res;
-    try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json','x-tabletop-passcode':UI.pass},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default', expect:'json'})}); }
+    try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json','x-tabletop-passcode':UI.pass},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default', expect:'json', private:!!(UI.privateMode && privateAvailable())})}); }
     catch{ if (attempt<1){ await sleep(4000); continue; } throw {code:'upstream_error'}; }
     if (res.status===401||res.status===403) throw {code:'bad_pass'};
     if (res.ok){
@@ -2642,6 +2728,8 @@ async function apiJson(input, opts={}){
       try{ return parseLoose(String(j.text||'')); }catch(e){ if (attempt<1) continue; throw e; }
     }
     const j = await res.json().catch(()=>({}));
+    if (j.error==='private_unavailable') throw {code:'private_unavailable'};
+    if (j.error==='private_busy' && attempt>=1) throw {code:'private_busy'};
     if (j.error==='daily_cap' || /per[- ]?day/i.test(String(j.detail||''))) throw {code:'daily_cap'};
     if (attempt<1){ busy('All free models were busy. Trying again in a few seconds…'); await sleep(8000); continue; }
     throw {code:'all_busy', detail:String(j.detail||'')};
@@ -2672,7 +2760,7 @@ async function directJson(input, opts={}){
 async function directOpenRouter(input){
   let res;
   try{ res = await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${UI.apiKey}`,'X-Title':'Policy Tabletop'},
-    body:JSON.stringify({models:OR_BROWSER_MODELS,max_tokens:6000,response_format:{type:'json_object'},reasoning:{effort:'low',exclude:true},messages:[{role:'system',content:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.'},{role:'user',content:String(input)}]})}); }
+    body:JSON.stringify({...(UI.privateMode ? {models:['deepseek/deepseek-v4.1-flash','openai/gpt-oss-120b'], provider:{zdr:true, data_collection:'deny'}, reasoning:{enabled:false}} : {models:OR_BROWSER_MODELS, reasoning:{effort:'low',exclude:true}}),max_tokens:6000,response_format:{type:'json_object'},messages:[{role:'system',content:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.'},{role:'user',content:String(input)}]})}); }
   catch{ throw {code:'upstream_error'}; }
   if (res.status===401 || res.status===403) throw {code:'bad_key'};
   if (res.status===429) throw {code:'rate_limited'};
@@ -2722,7 +2810,7 @@ function toggleMic(btn){
       try{
         const r = await fetch(window.TABLETOP_API);
         const j = r.ok ? await r.json().catch(()=>({})) : {};
-        if (j.ok){ UI.server=true; UI.economy=!!j.economy; UI.modelLabel=j.model||''; UI.parallel=Number(j.parallel)||1; UI.needPass=!!j.passcode; if (!UI.needPass) SAMPLE = {json: apiJson}; }
+        if (j.ok){ UI.privateAvail=!!j.private; UI.server=true; UI.economy=!!j.economy; UI.modelLabel=j.model||''; UI.parallel=Number(j.parallel)||1; UI.needPass=!!j.passcode; if (!UI.needPass) SAMPLE = {json: apiJson}; }
       }catch{}
     }
     if (!SAMPLE && !UI.server){ let k=''; try{ k = sessionStorage.getItem('pt_key')||''; }catch{} if (k){ UI.apiKey=k; UI.keyMode=true; try{ UI.keyProvider=sessionStorage.getItem('pt_prov')||'anthropic'; }catch{} SAMPLE={json:directJson}; } }
