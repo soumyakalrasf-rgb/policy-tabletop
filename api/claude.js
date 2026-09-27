@@ -13,8 +13,12 @@
 //   TABLETOP_ECONOMY    optional, Claude only. Set to 1 to run every Claude call on the lowest-cost model.
 
 const CLAUDE = { quick: "claude-haiku-4-5-20251001", default: "claude-sonnet-5", complex: "claude-opus-5-5" };
-// Free models, strongest first (September 2026 list). "openrouter/free" is OpenRouter's router across free models.
+// DeepSeek V4.1 Flash first: fast, dependable and about one cent per session (needs OpenRouter credit).
+// Then free models, strongest first (September 2026 list). "openrouter/free" is OpenRouter's router across free models.
+// Without credit on the account, the paid model is skipped automatically.
+const PAID_DEFAULT = "deepseek/deepseek-v4.1-flash";
 const DEFAULT_PREFERRED = [
+  PAID_DEFAULT,
   "qwen/qwen3.8-27b:free",
   "z-ai/glm-5.2:free",
   "openrouter/free",
@@ -46,11 +50,11 @@ function configured() {
   if (PROVIDER === "mixed") return !!process.env.OPENROUTER_API_KEY && !!process.env.ANTHROPIC_API_KEY;
   return !!process.env.ANTHROPIC_API_KEY;
 }
-function label() {
+function label(paidOk = true) {
   const lastResort = process.env.ANTHROPIC_API_KEY ? ", with Claude as a last resort" : "";
   if (PROVIDER === "openrouter") {
-    const first = PREFERRED[0];
-    const free = first.endsWith(":free") || first === "openrouter/free";
+    const first = paidOk ? PREFERRED[0] : (PREFERRED.find(isFree) || "free models");
+    const free = isFree(first);
     return free ? `free open models via OpenRouter (${first} first, then others)${lastResort}` : `${first} via OpenRouter, with free models as backup${lastResort}`;
   }
   if (PROVIDER === "mixed") return "free open models via OpenRouter for seat turns, Claude for the main steps";
@@ -89,6 +93,21 @@ export function extractJSON(raw) {
   return best ? best.v : undefined;
 }
 
+/* ---------- OpenRouter: credit check ---------- */
+let credit = { known: false, paid: true, at: 0 };
+async function hasCredit() {
+  if (credit.known && Date.now() - credit.at < 10 * 60 * 1000) return credit.paid;
+  try {
+    const r = await fetchWithTimeout("https://openrouter.ai/api/v1/key", { headers: { authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` } }, 5000);
+    const j = await r.json();
+    const d = j.data || {};
+    // is_free_tier: the account has never bought credit. limit_remaining: a spend cap set on this key, if any.
+    credit = { known: true, paid: d.is_free_tier === false && !(typeof d.limit_remaining === "number" && d.limit_remaining <= 0), at: Date.now() };
+  } catch { credit = { known: false, paid: true, at: Date.now() }; }
+  return credit.paid;
+}
+const isFree = id => id.endsWith(":free") || id === "openrouter/free";
+
 /* ---------- OpenRouter: try many free models ---------- */
 let catalog = null, catalogAt = 0;
 const cooldown = new Map(); // model -> time until which we skip it (kept while this server instance is warm)
@@ -110,7 +129,8 @@ async function freeModels() {
 async function candidateModels() {
   const cat = await freeModels();
   const known = new Set(cat);
-  const preferred = PREFERRED.filter(id => !cat.length || known.has(id) || !id.endsWith(":free"));
+  const paidOk = await hasCredit();
+  const preferred = PREFERRED.filter(id => isFree(id) ? (!cat.length || known.has(id) || id === "openrouter/free") : paidOk);
   const rank = id => { const k = FAMILY_ORDER.findIndex(re => re.test(id)); return k === -1 ? 99 : k; };
   const rest = cat.filter(id => !preferred.includes(id)).sort((a, b) => rank(a) - rank(b));
   const all = [...preferred, ...rest];
@@ -151,7 +171,7 @@ async function viaOpenRouter(prompt, wantJson, referer, deadline) {
     const left = deadline - Date.now();
     if (left < 8000) break;
     // Paid models are fast and dependable; free ones can hang, so give each a shorter window before moving on.
-    const perTry = model.endsWith(":free") || model === "openrouter/free" ? 45000 : 90000;
+    const perTry = isFree(model) ? 45000 : 90000;
     const out = await callOpenRouterModel(model, prompt, wantJson, Math.min(left - 3000, perTry), referer);
     tried.push(model);
     if (out.ok) {
@@ -164,6 +184,7 @@ async function viaOpenRouter(prompt, wantJson, referer, deadline) {
     }
     lastDetail = `${model}: ${out.detail}`;
     if (/per[- ]?day|free-models-per-day/i.test(out.detail)) { dailyCap = true; break; } // every free model shares this cap
+    if (out.status === 402) credit = { known: true, paid: false, at: Date.now() }; // out of credit: stop trying paid models for a while
     cooldown.set(model, Date.now() + (out.status === 429 ? 60 : 180) * 1000);
   }
   return { failed: true, dailyCap, detail: `${tried.length} free model${tried.length === 1 ? "" : "s"} tried. Last: ${lastDetail}` };
@@ -190,8 +211,9 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "GET") {
     // parallel: how many seat turns the page may run at once. Free models get one at a time to avoid rate limits.
-    const freeFirst = PROVIDER === "openrouter" && (PREFERRED[0].endsWith(":free") || PREFERRED[0] === "openrouter/free");
-    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(), parallel: freeFirst ? 1 : 3 });
+    const paidOk = PROVIDER === "openrouter" && configured() ? await hasCredit() : true;
+    const freeFirst = PROVIDER === "openrouter" && (isFree(PREFERRED[0]) || !paidOk);
+    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(paidOk), parallel: freeFirst ? 1 : 3, credit: PROVIDER === "openrouter" ? (credit.known ? credit.paid : "unknown") : undefined });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!configured()) return res.status(503).json({ error: "Server is missing an API key for the selected provider" });
