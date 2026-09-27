@@ -1,6 +1,6 @@
 # Policy Tabletop
 
-A rehearsal tool for government staff. Simulated perspectives debate a policy decision over three rounds. The tool then produces an executive summary of the discussion, a risk outlook, open questions with where to look, and a decision memo. Seats are simulated roles, not real people; take every output to real experts before deciding.
+A rehearsal tool for government staff. Simulated perspectives debate a policy decision, then the tool produces a one-page executive brief: the hardest objections and who raises them, the strongest case against the option you favor, what you can't answer yet, who is missing, a stakeholder tension table, and what would change each seat's mind. Choose a quick brief (about a minute, six seats) or a full workshop (three rounds, you can steer). Seats are simulated roles, not real people; take every output to real experts before deciding.
 
 ## Free live demo with open models (OpenRouter)
 

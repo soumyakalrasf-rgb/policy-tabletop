@@ -209,6 +209,38 @@ table.grid .num{font-family:var(--mono)}
 .es-block ul,.es-block ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:.92rem}
 .es-block p{font-size:.92rem}
 .es-lede{font-size:1.02rem;line-height:1.65;max-width:70ch;margin:-12px 0 28px;color:var(--ink)}
+.es-section{font-size:1.02rem;font-weight:600;margin:34px 0 14px;padding-top:18px;border-top:1px solid var(--line)}
+table.tension td{font-size:.86rem}
+table.tension td:nth-child(3){min-width:220px} table.tension td:nth-child(4){min-width:200px}
+.levers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.lever{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:grid;gap:8px;align-content:start}
+.reality{display:flex;gap:10px 14px;flex-wrap:wrap;align-items:center;margin-top:18px;padding:12px 14px;background:var(--surface-2);border-radius:var(--radius)}
+.reality input{width:auto;min-width:220px;flex:1}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.agreebar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px);z-index:4;display:grid;gap:8px;border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:var(--radius);padding:10px 12px;font-size:.84rem}
+.agreebar b{color:var(--amber)}
+.agreebar .btn{justify-self:start;background:var(--bg)}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.controls{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:3}
+.composer{box-shadow:0 6px 24px color-mix(in srgb,var(--ink) 10%,transparent)}
+.modepick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:620px){.modepick{grid-template-columns:minmax(0,1fr)}}
+.mode{display:grid;gap:3px;border:1px solid var(--line-2);border-radius:var(--radius);padding:10px 12px;cursor:pointer}
+.mode input{position:absolute;opacity:0;pointer-events:none}
+.mode.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mode:focus-within{outline:2px solid var(--ink);outline-offset:2px}
+.ctxlist{display:grid;gap:12px}
+.ctxitem{display:grid;gap:6px;padding:10px 0;border-top:1px dashed var(--line)}
+.ctxrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.ctxrow select{width:auto}
+button.cite{background:transparent;cursor:pointer;font:inherit;font-size:.74rem}
+.qbtn{display:block;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;font-size:.86rem}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:30;background:var(--bg);border-left:1px solid var(--line);box-shadow:-12px 0 40px color-mix(in srgb,var(--ink) 12%,transparent);padding:calc(env(safe-area-inset-top,0px) + 18px) 20px 24px;overflow-y:auto;display:grid;gap:14px;align-content:start}
+.drawer h2{font-size:1.1rem}
+.dhead{display:flex;justify-content:space-between;align-items:center}
+.dstatus{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.gstat{font-weight:600;font-size:.9rem}
+.dq{white-space:pre-wrap}
 .es-block.span-all{grid-column:1/-1;max-width:640px}
 .outlook{display:grid;gap:0}
 .orow{display:grid;grid-template-columns:minmax(0,1.6fr) auto auto;gap:4px 12px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:.88rem}
@@ -346,8 +378,9 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
         <div id="seatCard"></div>
       </div>
       <div class="side">
+        <div class="agreebar" id="agreeBanner" role="status" hidden></div>
         <div class="transcript">
-          <div class="th"><div class="seg2" role="tablist" aria-label="Side view"><button role="tab" id="sideT" aria-selected="true">Transcript</button><button role="tab" id="sideS" aria-selected="false">Synthesis</button></div><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="false">Key moments</button></span></div>
+          <div class="th"><div class="seg2" role="tablist" aria-label="Side view"><button role="tab" id="sideT" aria-selected="true">Transcript</button><button role="tab" id="sideS" aria-selected="false">Synthesis</button></div><span class="btnrow"><span class="small muted" id="turnCount"></span><button class="tgl" id="keyToggle" aria-pressed="true">Key exchanges only</button></span></div>
           <p class="simnote">All seats are simulated perspectives, not real people or organizations.</p>
           <div class="tlist" id="tlist" aria-live="polite"></div>
           <div class="synth" id="synth" hidden></div>
@@ -369,6 +402,8 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
     </section>
   </div>
 
+  <aside class="drawer" id="drawer" role="complementary" aria-labelledby="drawerTitle" hidden></aside>
+
   <footer class="guard">
     <details><summary>Guardrails and how this tool should be used</summary>
     <ul style="margin-top:8px">
@@ -384,7 +419,7 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
 <script>
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-var UI = {view:'summary', open:{}, keyOnly:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
+var UI = {view:'summary', open:{}, keyOnly:true, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs||{})){
@@ -456,6 +491,40 @@ const DEMO = {
   r1: {s1:[30,35,25,60,15], s2:[40,45,20,70,30], s3:[35,55,30,55,20], s4:[25,30,50,50,10], s5:[30,65,20,60,15], s6:[15,25,55,40,10], s7:[55,60,15,65,25], s8:[35,45,30,55,20], s9:[60,40,20,50,25], s10:[65,70,45,80,35], s11:[45,40,30,65,20], s12:[30,35,35,55,15]},
   // final round-3 values, including the scripted evidence steer (+8 on R4, +5 on R5)
   r3final: {s1:[35,45,25,70,20], s2:[40,50,20,75,30], s3:[35,60,25,70,25], s4:[30,40,35,65,15], s5:[35,65,20,70,20], s6:[20,30,40,65,15], s7:[50,60,20,70,25], s8:[35,50,30,70,20], s9:[55,45,20,65,25], s10:[60,65,40,80,35], s11:[40,45,30,70,20], s12:[30,40,30,70,20]},
+  prepare: {
+    objections:[
+      {who:'Labor perspective', what:'Staff were not consulted, and their duties could change without bargaining.'},
+      {who:'Budget office perspective', what:'The review needs reviewers and testing that nobody has funded.'},
+      {who:'IT perspective', what:'A new review repeats the purchasing checks we already run.'}
+    ],
+    case_against:'A tiered review only works if someone independent checks the ratings, and that costs money no one has budgeted. Without it, departments will rate their own tools as low risk, and the City gets the paperwork of a review without the protection.',
+    unanswered:['What the review would cost in its first year.','Whether chatbot conversations are public records that must be kept.','How accurate the tools are in languages other than English.'],
+    missing:['Residents with limited English, who would rely on the chatbot most.','Front-line call-center staff.','The council office that would field complaints if it goes wrong.']
+  },
+  tension: [
+    {seat:'s1', friction:'A separate review repeats our purchasing checks.', nonneg:'Must fit the existing purchasing process.', lever:'Build the review into the purchasing steps.', type:'process'},
+    {seat:'s2', friction:'Staff typing resident data into tools.', nonneg:'A data check at every level.', lever:'Already supportive; would oppose if the data check were dropped.', type:'process'},
+    {seat:'s3', friction:'Liability for wrong answers about eligibility.', nonneg:'A person answers anything about benefits or deadlines.', lever:'Written rules on what the tool may and may not say.', type:'legal'},
+    {seat:'s4', friction:'Slow reviews keep call waits long.', nonneg:'Reviews finish in weeks.', lever:'A guaranteed deadline for each review.', type:'process'},
+    {seat:'s5', friction:'Conversations that leave no record.', nonneg:'Every conversation is kept.', lever:'Retention rules agreed before launch.', type:'legal'},
+    {seat:'s12', friction:'No money for reviewers or testing.', nonneg:'A cost estimate before approval.', lever:'A first-year cost estimate and a named funding source.', type:'funding'},
+    {seat:'s6', friction:'Open-ended, case-by-case reviews.', nonneg:'Rules published in advance.', lever:'A published checklist based on existing standards.', type:'process'},
+    {seat:'s7', friction:'No way for residents to challenge an answer.', nonneg:'A public list of AI tools and a way to complain.', lever:'A complaint and appeal route written into the policy.', type:'legal'},
+    {seat:'s8', friction:'City rules that clash with state contracts.', nonneg:'Compatible with state guidance.', lever:'Use state reviewers where they exist.', type:'process'},
+    {seat:'s11', friction:'Duties could change without consultation.', nonneg:'Staff consulted; changes bargained.', lever:'A written commitment that no positions are cut in the pilot year.', type:'legal'},
+    {seat:'s9', friction:'Testing only in English.', nonneg:'Testing in the languages residents use.', lever:'Test results in the top languages before launch.', type:'evidence'},
+    {seat:'s10', friction:'Departments grading themselves.', nonneg:'Independent checks.', lever:'Proof that an outsider spot-checks the ratings.', type:'evidence'}
+  ],
+  constraints: {
+    budget:{summary:'Under a budget freeze, support for a tiered review weakens: without funded reviewers, most seats fall back to a public registry plus AI checks in purchasing. The labor and absent-voice seats warn that the cheaper route drops the safeguards they care about.',
+      turns:[{seat:'s12',text:'With no new money, the tiered review isn’t real. I’d back a registry and a short checklist in purchasing.'},{seat:'s1',text:'A freeze strengthens my case: build the checks into what we already do.'},{seat:'s9',text:'A cheaper option must still test other languages, or the people who rely on it most get hurt first.'}]},
+    legal:{summary:'If every automated answer must be explainable and open to appeal, the legal, civil liberties and records seats harden their support for tiers. The vendor seat warns that some tools can’t meet the bar, which would narrow the choice of products.',
+      turns:[{seat:'s3',text:'If answers must be explainable and appealable, only a tiered review with a person in the loop meets that bar.'},{seat:'s6',text:'Some off-the-shelf tools can’t explain their answers. That rule would narrow the market.'},{seat:'s7',text:'That’s the right bar. Residents need a way to challenge what they are told.'}]},
+    worst:{summary:'In the worst case, a chatbot gives many residents a wrong deadline and they lose benefits. Every seat moves toward stricter review, and the argument shifts to who is accountable and how residents are contacted.',
+      turns:[{seat:'s10',text:'This is the failure the tiered review was meant to stop, and it still happens if nobody checks the ratings.'},{seat:'s4',text:'We would need to reach every affected resident fast, and without records we couldn’t.'},{seat:'s11',text:'Staff will be the ones fixing it on the phones, so they need to be in the plan now.'}]},
+    opposing:{summary:'Pushed to argue against the tiered review, the seats found real weaknesses: it may be slow, unfunded and easy to game when departments rate themselves. The agreement was shallower than it looked.',
+      turns:[{seat:'s1',text:'Against: it creates a second layer of bureaucracy that will slow every useful tool.'},{seat:'s12',text:'Against: without funding it is a paper exercise.'},{seat:'s10',text:'Against: if departments rate themselves, the review is theater.'}]}
+  },
   steerShift: [0,0,0,8,5],
   // qualitative first pass per option; no figures are invented
   analysis: {
@@ -576,6 +645,8 @@ function demoScript(){
       overlooked:['Accuracy in languages other than English: raised by the absent voice, owned by no one.','Whether chatbot conversations are public records that must be kept.']
     },
     analysis: DEMO.analysis,
+    prepare: DEMO.prepare,
+    tension: DEMO.tension,
     matrix:{uk:['Which departments already use consumer AI tools informally?']},
     landing:{
       o1:{s1:'conditional',s2:'oppose',s3:'oppose',s4:'conditional',s5:'oppose',s6:'conditional',s7:'oppose',s8:'oppose',s9:'oppose',s10:'oppose',s11:'oppose',s12:'conditional'},
@@ -618,7 +689,7 @@ function freshState(mode){
     mode, stage:'setup', rawQuestion:'', question:'', questionConfirmed:false, decisionType:'deliberative', horizon:12, context:'',
     options:[], risks:[], seats:[], turns:[], est:{r1:{}, r3:{}}, current:{}, submitted:{r1:{}, r3:{}}, revealed:{r1:false,r3:false},
     shift:[], matrix:{kk:[],ku:[],uk:[],uu:[]}, verify:[], steers:[], expertQs:[], consult:[], landing:{}, conditions:{},
-    summary:null, analysis:{}, followups:[], camps:'', speaking:null, selected:null, queue:[], playing:false, awaitingSteer:false, speed:1, reviewDate:addMonths(12),
+    summary:null, analysis:{}, followups:[], camps:'', runMode:'quick', preferred:'', contextItems:[], stressTests:[], tension:[], prepare:null, reality:{answer:'',note:''}, speaking:null, selected:null, queue:[], playing:false, awaitingSteer:false, speed:1, reviewDate:addMonths(12),
     live:{phase:null, r1:{}, r2:null, r3:{}, error:null, busy:null, drafted:false}, steerTab:'ask', started:false, finished:false
   };
   if (mode==='demo'){
@@ -626,7 +697,7 @@ function freshState(mode){
       rawQuestion:DEMO.rawQuestion, question:DEMO.question, questionConfirmed:true, decisionType:DEMO.decisionType, horizon:DEMO.horizon,
       options:structuredClone(DEMO.options), risks:structuredClone(DEMO.risks),
       seats:DEMO.seats.map(s=>({...structuredClone(s), included:true})),
-      context:'Example scenario. All internal records named here are fictional placeholders.'
+      context:'Example scenario. All internal records named here are fictional placeholders.', runMode:'workshop', preferred:'o3'
     });
   }
   base.shift = base.risks.map(()=>0);
@@ -732,6 +803,8 @@ function applyEvent(ev){
       if (ev.matrix) for (const k of ['kk','ku','uk','uu']) addMatrix(k, ev.matrix[k]);
       if (ev.summary) S.summary = ev.summary;
       if (ev.analysis) S.analysis = ev.analysis;
+      if (ev.prepare) S.prepare = ev.prepare;
+      if (ev.tension) S.tension = ev.tension;
       break;
     case 'error': S.live.error = ev; S.playing=false; break;
   }
@@ -795,18 +868,19 @@ function toNextPause(){
 /* ---------- live mode (Claude via the sample capability) ---------- */
 const GUARD = `Rules: You simulate a ROLE, never a real named person, and never put words in a real person's mouth. Do not invent statistics, percentages from studies, quotes, dates, or facts. You may cite only the numbered sources allowed for the seat; if a claim does not come from them, use source_index 0 (reasoning only). Write for a busy executive: plain everyday words, short sentences, no jargon, and spell out any acronym. Never mention numbers, percentages or ratings in your text; risk ratings belong only in the estimates field. Keep politically contested topics balanced.`;
 function sessionBrief(){
-  const ctx = (S.context||'').slice(0,6000);
+  const ctx = (S.context||'').slice(0,9000);
   return [
     `Decision question: ${S.question}`,
     `Decision type: ${S.decisionType} (${S.decisionType==='deliberative'?'informs a decision':'records a decision'}). Time horizon: ${S.horizon} months.`,
     `Response options:\n${S.options.map(o=>`- ${o.id} ${o.label}: ${o.desc}`).join('\n')}`,
     `Risks to estimate (likelihood 0-100 that each happens within ${S.horizon} months):\n${S.risks.map(r=>`- ${r.id} ${r.short}: ${r.text}`).join('\n')}`,
-    ctx ? `Internal context provided by staff (treat as the seat's named internal record only if it is in the seat's sources):\n${ctx}` : '',
+    ctx ? `Background provided by staff, tagged by authority. Weigh BINDING CONSTRAINTS first and never propose anything that breaks one; then EMPIRICAL DATA; then PUBLIC INPUT. When you rely on an item, cite it by its name.\n${ctx}` : '',
+    targetOption() && S.preferred ? `Staff are leaning toward "${targetOption().label}". Test this option hard: look for its weaknesses as well as its strengths.` : '',
     S.steers.length ? `Human steers so far:\n${S.steers.map(s=>`- ${s.kind}: ${s.text}`).join('\n')}` : ''
   ].filter(Boolean).join('\n\n');
 }
 function seatBrief(s){ return `Role: ${s.role} (group: ${GROUPS[s.group]?.label}). Perspective: ${s.perspective}\nAllowed sources:\n${s.sources.map((x,i)=>`${i+1}. ${x}`).join('\n')}${s.focus?`\nThe facilitator asked you to focus on: ${s.focus}.${s.focus==='Maximum opposition'?' Argue the strongest honest case against the option with most support.':''}`:''}`; }
-function verifyQuote(q){ if (!q || q==='null') return {}; const norm=x=>String(x).toLowerCase().replace(/[\u201c\u201d"']/g,'').replace(/\s+/g,' ').trim(); const nq=norm(q); if (nq.length<12 || !S.context) return {}; return norm(S.context).includes(nq) ? {quote:String(q).trim()} : {quoteDropped:true}; }
+function verifyQuote(q){ if (!q || q==='null' || !S.context) return {}; const m = findQuote(String(q)); return m ? {quote:String(q).trim(), quoteMeta:m} : {quoteDropped:true}; }
 const QUOTE_ASK = () => S.context ? ',"quote":"one sentence copied word for word from the staff context that supports this turn, or null"' : '';
 function transcriptText(maxChars=14000){
   let out = S.turns.map(t=>`[${speakerInfo(t.seat).name} | ${TYPE_LABEL[t.type]||t.type}] ${t.disputes?`(disputes: "${t.disputes}") `:''}${t.text}`).join('\n');
@@ -834,7 +908,7 @@ function applySetupParts(r, onlyMissing){
       return {id:'s'+(i+1), role, group, perspective:String(pick(x,['perspective','description','view','stance'])||''), sources:src, included:true, abbr: group==='redteam'?'RED':group==='absent'?'ABS':abbr(role)}; });
   if (!onlyMissing || S.options.length<2) { if (opts.length) S.options = opts; }
   if (!onlyMissing || S.risks.length<3) { if (risks.length) S.risks = risks; }
-  if (!onlyMissing || S.seats.length<6) { if (seats.length) S.seats = seats; }
+  if (!onlyMissing || S.seats.length<(S.runMode==='quick'?4:6)) { if (seats.length) S.seats = seats; }
   S.shift = S.risks.map(()=>0);
 }
 function ensureKeySeats(){
@@ -845,7 +919,7 @@ function ensureKeySeats(){
 }
 async function draftSetup(){
   const q = $('#liveQ').value.trim(); if (!q){ toast('Enter the policy question first.'); return; }
-  S.rawQuestion = q; S.context = $('#liveCtx').value; S.decisionType = $('#liveType').value; S.horizon = Number($('#liveHorizon').value)||12;
+  S.rawQuestion = q; rebuildContext(); S.decisionType = $('#liveType').value; S.horizon = Number($('#liveHorizon').value)||12;
   S.reviewDate = addMonths(S.horizon);
   busy('Drafting setup…'); renderSetup();
   const prompt = `You are the setup assistant for Policy Tabletop, a rehearsal tool that helps government staff prepare for a real decision by simulating a structured debate among perspectives. It does not decide anything.
@@ -861,7 +935,7 @@ Return only JSON of this shape:
  "seats":[{"role":"role name","group":"internal|external|absent|redteam","perspective":"one sentence","sources":["2 or 3 grounding sources"]}],
  "risks":[{"short":"≤4 words","text":"one event that either happens or not within the horizon"}]}
 
-Requirements: 3 or 4 options, including a minimal or "do nothing more" option. 8 to 12 seats, each named as a perspective (for example "Labor perspective", never the name of a real organization or person): internal perspectives (e.g. IT, security, legal, affected departments, and the budget office); external perspectives (industry, civil society, partners, other levels of government, and labor or staff unions when jobs are affected); an elected-official or political-exposure perspective when the decision is publicly visible; exactly one seat with group "absent" for the people most affected but least represented; exactly one seat with group "redteam" named "Red Team" whose job is to argue how each option fails. Exactly 5 risks. Sources must be real public documents you are confident exist (laws, standards, official guidance) or internal records named generically and marked "(internal record)", using the staff context where possible. Seats are roles, never real named people. Invent no statistics. If the topic is politically contested, spread seats across the range of views.`;
+Requirements: 3 or 4 options, including a minimal or "do nothing more" option. ${S.runMode==='quick'?'Exactly 6 seats':'8 to 12 seats'}, each named as a perspective (for example "Labor perspective", never the name of a real organization or person): internal perspectives (e.g. IT, security, legal, affected departments, and the budget office); external perspectives (industry, civil society, partners, other levels of government, and labor or staff unions when jobs are affected); an elected-official or political-exposure perspective when the decision is publicly visible; exactly one seat with group "absent" for the people most affected but least represented; exactly one seat with group "redteam" named "Red Team" whose job is to argue how each option fails. Exactly 5 risks. Sources must be real public documents you are confident exist (laws, standards, official guidance) or internal records named generically and marked "(internal record)", using the staff context where possible. Seats are roles, never real named people. Invent no statistics. If the topic is politically contested, spread seats across the range of views.`;
   try{
     const r = await askJSON(prompt,'default');
     S.question = String(pick(r,['sharpened','question','decision_question'])||q); S.questionConfirmed = false;
@@ -869,7 +943,7 @@ Requirements: 3 or 4 options, including a minimal or "do nothing more" option. 8
     // If the model skipped or shortened any part, ask once more for just the missing pieces.
     const need = [];
     if (S.options.length<2) need.push('"options": 3 or 4 options, including a "do nothing more" option, each {"label","desc"}');
-    if (S.seats.length<6) need.push('"seats": 8 to 10 perspective seats, each {"role","group":"internal|external|absent|redteam","perspective","sources":[2 real sources]}, including one "absent" seat and one "redteam" seat named "Red Team"');
+    if (S.seats.length<(S.runMode==='quick'?4:6)) need.push('"seats": 8 to 10 perspective seats, each {"role","group":"internal|external|absent|redteam","perspective","sources":[2 real sources]}, including one "absent" seat and one "redteam" seat named "Red Team"');
     if (S.risks.length<3) need.push('"risks": exactly 5 risks, each {"short":"≤4 words","text":"one event that either happens or not within the horizon"}');
     if (need.length){
       busy('Filling in the rest of the setup…'); renderSetup();
@@ -897,7 +971,7 @@ async function liveRun(from){
           const r = await askJSON(`You are one seat in Policy Tabletop, a rehearsal of a government policy debate.\n\n${seatBrief(s)}\n\n${sessionBrief()}\n\nRound 1, independent estimates. You have not seen any other seat's position or estimates. First consider base rates: how often similar policies elsewhere had each problem. Only state a base rate if it is in your sources; otherwise say it is unknown.\n\nReturn only JSON: {"position":"your position in 2-3 sentences, first person, as the role","source_index":0,"estimates":[${S.risks.map(r=>r.id).join(', ')} as integers 0-100],"known_unknowns":[{"item":"open question (up to 2)","where":"where staff could look: a named law, standard, dataset, office or public source you are confident exists","next":"one concrete next step"}],"unknown_knowns":[{"item":"something someone inside likely knows but hasn't written down (up to 1)","who":"the role likely to know","next":"what to ask them for"}],"verify":["up to 2 factual claims you made without a source"]${QUOTE_ASK()}}\n\n${GUARD}`, 'quick');
           if (S!==my) throw {code:'stale'}; S.live.r1[s.id] = {position:String(r.position||''), source:srcFrom(s,r.source_index), est:estArr(r.estimates), ku:r.known_unknowns||[], uk:r.unknown_knowns||[], verify:r.verify||[], ...verifyQuote(r.quote)};
           const d = S.live.r1[s.id];
-          enqueue({k:'turn',seat:s.id,type:'position',text:d.position,source:d.source,verify:d.verify,matrix:{ku:d.ku,uk:d.uk},quote:d.quote,quoteDropped:d.quoteDropped});
+          enqueue({k:'turn',seat:s.id,type:'position',text:d.position,source:d.source,verify:d.verify,matrix:{ku:d.ku,uk:d.uk},quote:d.quote,quoteMeta:d.quoteMeta,quoteDropped:d.quoteDropped});
           enqueue({k:'seal',seat:s.id,round:'r1',est:d.est.map((v,i)=>v-(S.shift[i]||0))});
         }));
       }
@@ -920,12 +994,15 @@ async function liveRun(from){
         const type = ['challenge','concession','position','premortem'].includes(t.type) ? t.type : 'position';
         enqueue({k:'turn',seat:s.id,type,target:seatById(String(t.target))?String(t.target):null,...verifyQuote(t.quote),text:String(t.text||''),source:srcFrom(s,t.source_index),disputes:t.disputes&&t.disputes!=='null'?String(t.disputes):null,verify:t.verify&&t.verify!=='null'?[String(t.verify)]:[],matrix:type==='premortem'?{uu:[String(t.text||'').slice(0,160)]}:null});
       }
-      enqueue({k:'turn',seat:'mod',type:'moderator',text:`${r.camps||'Camps are forming.'} Pausing for human steering.`,camps:true,source:null,matrix:{kk:r.known_knowns||[],ku:r.known_unknowns||[],uk:r.unknown_knowns||[],uu:r.premortem_probes||[]}});
-      enqueue({k:'pause'});
-      S.live.busy=null; renderFoot();
-      S.live.phase='gate';
-      await new Promise(res=>{ S.gateResolve=res; });
-      from='r3';
+      enqueue({k:'turn',seat:'mod',type:'moderator',text:`${r.camps||'Camps are forming.'}${S.runMode==='quick'?'':' Pausing for your steering.'}`,camps:true,source:null,matrix:{kk:r.known_knowns||[],ku:r.known_unknowns||[],uk:r.unknown_knowns||[],uu:r.premortem_probes||[]}});
+      if (S.runMode==='quick'){ from='out'; }
+      else {
+        enqueue({k:'pause'});
+        S.live.busy=null; renderFoot();
+        S.live.phase='gate';
+        await new Promise(res=>{ S.gateResolve=res; });
+        from='r3';
+      }
     }
     if (from==='r3'){
       S.live.phase='r3';
@@ -947,12 +1024,21 @@ async function liveRun(from){
       S.live.phase='out';
       busy('Writing outputs…');
       const seats = inSeats();
-      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nInclude every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default');
+      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","prepare":{"objections":[{"who":"seat role","what":"the objection in under 25 words"}],"case_against":"2 or 3 plain sentences: the strongest honest case against the option under test","unanswered":["up to 3 questions staff cannot answer yet"],"missing":["up to 3 people or groups missing from the room"]},"tension":[{"seat":"s1","friction":"main friction with the option under test, under 15 words","nonnegotiable":"what this seat will not give up, under 12 words"}],"discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nThe option under test is "${(targetOption()||{}).label||'the option with most support'}". List the 3 hardest objections, strongest first. Include one "tension" entry per seat. Include every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default');
       const landing = {};
       for (const o of S.options){ landing[o.id]={}; for (const s of seats){ const v=r.landing?.[o.id]?.[s.id]; landing[o.id][s.id] = ['support','conditional','oppose'].includes(v)?v:null; } }
+      // Second pass: what would move each seat on the option under test.
+      let tension = asList(r.tension).map(x=>({seat:String(x.seat||''), friction:String(x.friction||''), nonneg:String(x.nonnegotiable||x.nonneg||'')})).filter(x=>seatById(x.seat));
+      try{
+        const tgt = S.options.find(o=>o.id===S.preferred) || (()=>{ let best=null,bs=-1; for (const o of S.options){ const m=landing[o.id]||{}; let sc=0; for (const v of Object.values(m)) sc += v==='support'?2:v==='conditional'?1:0; if (sc>bs){bs=sc;best=o;} } return best; })();
+        busy('Asking each seat what would change its mind…');
+        const lv = await askJSON(`You run Policy Tabletop. The option under test is "${tgt?tgt.label:'the leading option'}".\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript:\n${transcriptText(10000)}\n\nFor each seat, name the specific evidence, legal guarantee, funding or process change that would move it to neutral or supportive on this option. If a seat already supports it, name what would make it withdraw support.\nReturn only JSON: {"levers":[{"seat":"s1","lever":"under 20 words","type":"evidence|legal|funding|process"}]}\n\n${GUARD}`,'default');
+        for (const l of asList(lv.levers)){ const id=String(l.seat||''); if (!seatById(id)) continue; let row=tension.find(x=>x.seat===id); if (!row){ row={seat:id,friction:'',nonneg:''}; tension.push(row); } row.lever=String(l.lever||''); row.type=['evidence','legal','funding','process'].includes(l.type)?l.type:'process'; }
+      }catch(e){ if (e?.code==='stale') throw e; }
+      if (S!==my) throw {code:'stale'};
       enqueue({k:'stage',to:'outputs'});
-      enqueue({k:'outputs',landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis:(r.analysis&&typeof r.analysis==='object')?r.analysis:{},summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):'',discussion:r.discussion?String(r.discussion):'',agreed:arr(r.agreed),disputed:arr(r.disputed),changed:arr(r.changed||r.changed_minds),overlooked:arr(r.overlooked)}});
-      enqueue({k:'turn',seat:'mod',type:'moderator',text:'Outputs are ready below. This record informs a decision; it does not make one.',source:null});
+      enqueue({k:'outputs',prepare:(r.prepare&&typeof r.prepare==='object')?r.prepare:null,tension,landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis:(r.analysis&&typeof r.analysis==='object')?r.analysis:{},summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):'',discussion:r.discussion?String(r.discussion):'',agreed:arr(r.agreed),disputed:arr(r.disputed),changed:arr(r.changed||r.changed_minds),overlooked:arr(r.overlooked)}});
+      enqueue({k:'turn',seat:'mod',type:'moderator',text:'The brief is ready above. It informs a decision; it doesn’t make one.',source:null});
       S.live.phase='done';
     }
     S.live.busy=null; renderFoot();
@@ -1004,7 +1090,7 @@ function startTabletop(){
   document.getElementById('stage').scrollIntoView({behavior:'smooth', block:'start'});
 }
 function restart(){
-  const k = {rawQuestion:S.rawQuestion, question:S.question, questionConfirmed:S.questionConfirmed, decisionType:S.decisionType, horizon:S.horizon, context:S.context,
+  const k = {rawQuestion:S.rawQuestion, question:S.question, questionConfirmed:S.questionConfirmed, decisionType:S.decisionType, horizon:S.horizon, context:S.context, contextItems:S.contextItems, runMode:S.runMode, preferred:S.preferred,
     options:S.options, risks:S.risks, seats:S.seats.filter(s=>!s.addedMid)};
   const mode=S.mode, drafted=S.live.drafted;
   pause(); S = freshState(mode); Object.assign(S, k); S.live.drafted = drafted; S.shift = S.risks.map(()=>0); S.reviewDate = addMonths(S.horizon);
@@ -1113,7 +1199,15 @@ function buildRecord(){
     if (sd.discussion) L.push(sd.discussion,'');
     const sec2 = (t,a) => { if (a.length){ L.push(`**${t}:**`); a.forEach(x=>L.push(`- ${x}`)); L.push(''); } };
     sec2('Where they agreed', sd.agreed); sec2('Where they disagreed', sd.disputed); sec2('What changed minds', sd.changed); sec2('What the room almost missed', sd.overlooked);
+    const pr = prepareData(); const tg = targetOption();
+    L.push('### Prepare for the room','');
+    if (pr.objections.length){ L.push('**Hardest objections:**'); pr.objections.forEach((o,i)=>L.push(`${i+1}. ${o.who?o.who+': ':''}${o.what}`)); L.push(''); }
+    if (pr.caseAgainst) L.push(`**Strongest case against ${tg?tg.label:'the leading option'}:** ${pr.caseAgainst}`,'');
+    sec2('Questions we can’t answer yet', pr.unanswered); sec2('Missing from the room', pr.missing);
+    if (tensionRows().length) L.push(tensionMarkdown(),'');
+    if (S.stressTests.length){ L.push('**Stress tests:**'); S.stressTests.forEach(x=>L.push(`- ${x.label}: ${x.summary}`)); L.push(''); }
     if (sd.risks.length){ L.push(`**Risk outlook, next ${S.horizon} months:**`); sd.risks.forEach(r=>L.push(`- ${r.text}`)); L.push(''); }
+    if (S.reality.answer) L.push(`**After the real meeting, did this surface what came up?** ${({yes:'Yes',partly:'Partly',no:'No'})[S.reality.answer]}.${S.reality.note?` ${S.reality.note}`:''}`,'');
   } else L.push('Session not finished.','');
   L.push('## Options compared','');
   for (const o of S.options){ const t=tally(o.id); L.push(`- **${o.label}**: ${o.desc}${Object.keys(S.landing).length?` Support ${t.support}, with conditions ${t.conditional}, oppose ${t.oppose}.`:''}${S.conditions[o.id]?` Conditions: ${S.conditions[o.id]}`:''}`); }
@@ -1162,7 +1256,7 @@ async function copyText(text){
 
 /* ---------- render ---------- */
 function renderAll(){
-  renderHeader(); renderSummary(); renderSetup(); renderTable(); renderSeatCard(); renderTranscript(); renderControls();
+  renderHeader(); renderSummary(); renderSetup(); renderAgreeBanner(); renderTable(); renderSeatCard(); renderTranscript(); renderControls();
   renderLanding(); renderAnalysis(); renderMatrix(); renderLists(); renderRecord(); renderSticky();
 }
 function renderHeader(){
@@ -1175,8 +1269,9 @@ function renderHeader(){
     h('span',{class:'chip'},'Review ',h('b',{},S.reviewDate)),
     h('span',{class:'chip'},S.questionConfirmed?'Question confirmed':'Question not yet confirmed')
   );
-  const idx = STAGES.findIndex(x=>x[0]===S.stage);
-  $('#stepper').replaceChildren(...STAGES.map(([k,l],i)=>h('li',{class:i<idx?'done':i===idx?'now':'', 'aria-current':i===idx?'step':null},h('span',{class:'n'},i<idx?'✓':String(i)),l)));
+  const shown = STAGES.filter(([k])=>!(k==='r3' && S.runMode==='quick'));
+  const idx = shown.findIndex(x=>x[0]===S.stage);
+  $('#stepper').replaceChildren(...shown.map(([k,l],i)=>h('li',{class:i<idx?'done':i===idx?'now':'', 'aria-current':i===idx?'step':null},h('span',{class:'n'},i<idx?'✓':String(i+1)),l)));
 }
 
 const STARTERS = [
@@ -1222,10 +1317,11 @@ function intakeBlock(){
     CAN_MIC
       ? h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Speaking works too. '),'Your browser’s speech service turns it into text you can edit. Get consent before recording anyone else.'))
       : h('p',{class:'dictate'},svg(MIC),h('span',{},h('b',{},'Prefer to talk? '),'Use your device’s dictation in the box: the mic on a phone keyboard, Windows key + H, or Fn twice on a Mac.')),
-    det('ctx','Add background (optional): notes, prior decisions, documents',
-      h('div',{class:'steerform'},
-        h('textarea',{id:'liveCtx',rows:5,'aria-label':'Background context',oninput:e=>{S.context=e.target.value;},placeholder:'Paste notes or excerpts, or a transcript of a recorded discussion.'},S.context),
-        h('div',{class:'field'},h('label',{for:'ctxFile'},'Or add text files (.txt, .md, .csv)'),h('input',{id:'ctxFile',type:'file',accept:'.txt,.md,.csv,text/plain,text/markdown,text/csv',multiple:true,onchange:readCtxFiles})))),
+    det('ctx','Add background (optional): rules, data and public input', contextBlock()),
+    h('div',{class:'field'},h('span',{class:'label',style:'margin-bottom:4px;display:block'},'How much time do you have?'),
+      h('div',{class:'modepick',role:'radiogroup','aria-label':'Session length'},
+        ...[['quick','Quick brief','About a minute. Six seats give their views and push back, then you get the brief.'],['workshop','Full workshop','Three rounds with up to twelve seats. You can steer the discussion as it runs.']].map(([v,l,d])=>
+          h('label',{class:'mode'+(S.runMode===v?' on':'')},h('input',{type:'radio',name:'runMode',value:v,checked:S.runMode===v,onchange:()=>{S.runMode=v;renderSetupForce();}}),h('b',{},l),h('span',{class:'small muted'},d))))),
     h('div',{class:'inline3'},
       h('div',{class:'field'},h('label',{for:'liveType'},'This session'),h('select',{id:'liveType',onchange:e=>{S.decisionType=e.target.value;renderHeader();}},h('option',{value:'deliberative',selected:S.decisionType==='deliberative'},'Informs a decision'),h('option',{value:'decisional',selected:S.decisionType==='decisional'},'Records a decision'))),
       h('div',{class:'field'},h('label',{for:'liveHorizon'},'Look ahead'),h('select',{id:'liveHorizon',onchange:e=>{S.horizon=Number(e.target.value);S.reviewDate=addMonths(S.horizon);renderHeader();}},...[3,6,12,24].map(m=>h('option',{value:m,selected:S.horizon===m},`${m} months`)))),
@@ -1260,15 +1356,18 @@ function readyBlock(){
     h('div',{class:'field'},h('label',{for:'sq'},S.mode==='live'?'Claude sharpened your question. Edit it if needed.':'Decision question (edit if needed)'),
       h('textarea',{id:'sq',rows:2,oninput:e=>{S.question=e.target.value;$('#qText').textContent=S.question;}},S.question)),
     S.mode==='live' && S.rawQuestion ? h('p',{class:'small muted'},'You said: ',S.rawQuestion) : null,
-    h('label',{class:'confirm'},h('input',{type:'checkbox',id:'sqOk',checked:S.questionConfirmed,onchange:e=>{S.questionConfirmed=e.target.checked;renderHeader();}}),'This is the question we are deciding'),
+    S.mode==='demo' ? h('p',{class:'small muted'},'This example stress-tests ',h('b',{},'Tiered impact assessment'),'.') :
+      h('div',{class:'field'},h('label',{for:'prefOpt'},'Which option are you leaning toward? The seats will stress-test it.'),
+        h('select',{id:'prefOpt',onchange:e=>{S.preferred=e.target.value;}},h('option',{value:''},'Not sure yet: test them all'),...S.options.map(o=>h('option',{value:o.id,selected:S.preferred===o.id},o.label)))),
     h('div',{class:'meta',style:'margin-top:0'},
       h('span',{class:'chip'},h('b',{},String(S.options.length)),' options'),
       h('span',{class:'chip'},h('b',{},String(S.risks.length)),' risks'),
       h('span',{class:'chip'},h('b',{},String(inSeats().length)),' seats'),
+      h('span',{class:'chip'},S.runMode==='quick'?'Quick brief':'Full workshop'),
       hasAbsent?h('span',{class:'chip'},'✓ absent voice'):null, hasRed?h('span',{class:'chip'},'✓ Red Team'):null),
     (!hasAbsent||!hasRed) ? h('p',{class:'note warn'},'Include one absent-voice seat and one Red Team seat. They guard against missing voices and easy agreement.') : null,
     h('div',{class:'btnrow'},
-      h('button',{class:'btn primary',onclick:startTabletop},'Start the tabletop →'),
+      h('button',{class:'btn primary',onclick:()=>{S.questionConfirmed=true;startTabletop();}},S.mode==='live'&&S.runMode==='quick'?'Confirm and run the quick brief →':'Confirm and start →'),
       S.mode==='demo' ? h('button',{class:'btn',onclick:showFinished},'Skip to the results') : null,
       h('label',{class:'btn',for:'loadSession1'},'Load a saved session',h('input',{type:'file',id:'loadSession1',accept:'.json,application/json',hidden:true,onchange:loadSession}))),
     det('edit','Review or edit options, risks and seats', editorGrid())
@@ -1311,14 +1410,10 @@ function editorGrid(){
   return h('div',{class:'setup-grid'},left,right);
 }
 function setupSig(){ return [S.mode,S.options.length,S.risks.length,S.seats.length,inSeats().length,S.live.drafted,!!S.live.busy,SAMPLE===undefined?'u':SAMPLE?'y':'n'].join('|'); }
-function readCtxFiles(e){
-  const files=[...e.target.files]; if (!files.length) return;
-  Promise.all(files.map(f=>f.text().then(t=>`--- ${f.name} ---\n${t}`))).then(parts=>{ const ta=$('#liveCtx'); ta.value = (ta.value?ta.value+'\n\n':'') + parts.join('\n\n'); S.context=ta.value; toast(`Added ${files.length} file${files.length>1?'s':''}`); });
-}
 function renderSetupForce(){ $('#setupPanel').dataset.sig=''; document.activeElement?.blur?.(); renderSetup(); renderHeader(); }
 
 function renderTable(){
-  $('#stage').hidden = !S.started;
+  $('#stage').hidden = !S.started || (S.finished && !S.queue.length && !UI.showStage);
   const t = $('#table'); t.querySelectorAll('.seat').forEach(x=>x.remove());
   const seats = S.stage==='setup' && !S.started ? S.seats : inSeats();
   const n = seats.length;
@@ -1384,22 +1479,20 @@ function renderSeatCard(){
   ));
 }
 function citeEl(name){
-  const url = srcUrl(name);
-  return url ? h('a',{class:'cite',href:url,target:'_blank',rel:'noopener noreferrer',title:'Opens the public source in a new tab'},name,' ↗')
-             : h('span',{class:'cite plain',title:'Internal record: not linked. Check it with the owning office.'},name);
+  return h('button',{class:'cite'+(srcUrl(name)?'':' plain'),type:'button',title:'Show source details',onclick:()=>openDrawer(name)},name, srcUrl(name)?' ↗':'');
 }
 var lastTurnCount = 0;
-const KEY = new Set(['challenge','concession','premortem','moderator','steer','answer']);
+const KEY = new Set(['challenge','concession','premortem','steer','answer']);
 function turnEl(t){
   const sp = speakerInfo(t.seat);
   const isSeat = t.seat!=='mod' && t.seat!=='staff';
   const cls = t.type==='steer'?'steer':t.type;
-  const badge = !isSeat ? null : t.source ? h('span',{class:'badge ok'},'Sourced') : h('span',{class:'badge no'},'Reasoning only');
+  const badge = !isSeat ? null : t.source ? h('span',{class:'badge ok'},'Sourced') : h('span',{class:'badge no'},'Reasoning only · no source');
   return h('div',{class:'turn'+(t.seat==='staff'?' staff':'')+(t.seat==='mod'?' mod':'')},
     h('div',{class:'who'},h('span',{class:'dot',style:`--gc:${sp.color}`}),sp.name,h('span',{class:`ttype ${cls}`},TYPE_LABEL[t.type]||t.type),badge,h('span',{class:'src',style:'margin-left:auto'},`#${t.i}`)),
     t.disputes ? h('div',{class:'disputes'},'Disputes: “',t.disputes,'”') : null,
-    h('div',{class:'txt'},t.text),
-    t.quote ? h('blockquote',{class:'quote'},`“${t.quote}”`,h('span',{class:'qsrc'},'Verified word for word in your uploaded documents')) : null,
+    h('div',{class:'txt'},...textWithCites(t.text)),
+    t.quote ? h('button',{class:'quote qbtn',onclick:()=>openDrawer(t.quoteMeta?.item||'Your uploaded material', t.quoteMeta)},`“${t.quote}”`,h('span',{class:'qsrc'},`Verified word for word in ${t.quoteMeta?.item||'your uploaded material'}${t.quoteMeta?` · ${AUTH[t.quoteMeta.type].label}`:''}. Open to see the passage.`)) : null,
     t.quoteDropped ? h('div',{class:'src none'},'A quote this seat offered was not found in your documents and was removed.') : null,
     t.note ? h('div',{class:'small muted'},t.note) : null,
 
@@ -1497,7 +1590,10 @@ function renderControls(){
   const keep = {}; c.querySelectorAll('input[type=text],textarea').forEach(el=>{ if(el.id) keep[el.id]=el.value; });
   c.replaceChildren(
     h('div',{class:'playback'},playCtl),
-    h('div',{class:'composer'},h('div',{class:'composer-head'},h('span',{class:'you'},'You · facilitator'),h('span',{class:'small muted'},'Every steer is logged in the record')), tabBar, form)
+    h('div',{class:'composer'},
+      h('div',{class:'composer-head'},h('span',{class:'you'},'You · facilitator'),h('span',{class:'small muted'},'Every steer is logged in the record')),
+      h('div',{class:'chiprow','aria-label':'Quick stress tests'},h('span',{class:'small muted'},'Stress-test:'),...['budget','legal','worst'].map(k=>h('button',{class:'pill',disabled:!S.started||!!S.live.busy,onclick:()=>runConstraint(k)},CONSTRAINTS[k].label))),
+      tabBar, form)
   );
   for (const [id,v] of Object.entries(keep)){ const el=document.getElementById(id); if (el && v) el.value=v; }
 }
@@ -1540,8 +1636,8 @@ function consensusWarnings(){
   return w;
 }
 function riskWatch(){
-  if (!S.revealed.r3) return [];
-  return riskDirection().map(d=>({text:`${d.r.short}: ${d.level}, ${d.trend} ${TREND_ARROW[d.trend]}, ${d.agree}.`, d}));
+  if (!S.revealed.r1) return [];
+  return riskDirection().map(d=>({text:`${d.r.short}: ${d.level}${S.revealed.r3?`, ${d.trend} ${TREND_ARROW[d.trend]}`:''}, ${d.agree}.`, d}));
 }
 function summaryData(){
   const lead = leadingOption();
@@ -1577,38 +1673,73 @@ function showFinished(){
 }
 function renderSummary(){
   const p = $('#summaryPanel');
-  const head = h('div',{class:'es-head'},h('span',{class:'label'},'Executive summary'),h('span',{class:'stamp'},'Simulated · informs, does not decide'));
+  const head = h('div',{class:'es-head'},h('span',{class:'label'},'Executive brief'),h('span',{class:'stamp'},'Simulated · informs, does not decide'));
   const d = (S.summary || Object.keys(S.landing).length) ? summaryData() : null;
   if (!d){
     p.hidden = !S.started;
     if (!S.started) return;
     const stageName = STAGES.find(x=>x[0]===S.stage)[1];
     p.replaceChildren(...[head,
-      h('p',{class:'es-empty'},`The session is running (${stageName}). The summary appears here when it finishes.`),
+      h('p',{class:'es-empty'},`The session is running (${stageName}). The brief appears here when it finishes.`),
       S.mode==='demo' ? h('div',{class:'btnrow'},h('button',{class:'btn primary',onclick:showFinished},'Skip to the results')) : null].filter(Boolean));
     return;
   }
   p.hidden = false;
+  const t = targetOption();
+  const prep = prepareData();
   const warn = consensusWarnings();
-  const block = (label, kids) => h('div',{class:'es-block'},h('div',{class:'label'},label),...[].concat(kids));
-  const list = (items, empty) => items.length ? h('ul',{},...items.map(x=>h('li',{},x))) : h('p',{class:'muted'},empty);
+  const list = (items, empty, ordered) => items.length ? h(ordered?'ol':'ul',{},...items.map(x=>h('li',{},x))) : h('p',{class:'muted'},empty);
+  const block = (label, kids, cls) => h('div',{class:'es-block'+(cls?' '+cls:'')},h('div',{class:'label'},label),...[].concat(kids));
+  const rows = tensionRows();
+  const levers = {}; rows.filter(r=>r.lever).forEach(r=>{ (levers[r.type||'process'] ||= []).push(r); });
+  const stanceWord = v => ({support:'Supports',conditional:'With conditions',oppose:'Opposes'})[v]||'—';
   p.replaceChildren(...[head,
     h('h2',{class:'es-headline'},d.headline),
     d.discussion ? h('p',{class:'es-lede'},d.discussion) : null,
-    warn.length ? h('div',{class:'alert',role:'note'},h('b',{},'Be careful. '),warn.join(' '),' Simulated seats agree more than real people usually do. Check this with the people involved before relying on it.') : null,
+    warn.length ? h('div',{class:'alert',role:'note'},h('b',{},'Be careful. '),warn.join(' '),' Simulated seats agree more than real people usually do.',
+      S.stressTests.some(x=>x.kind==='opposing') ? null : h('div',{style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>runConstraint('opposing')},'Stress-test with opposing constraints'))) : null,
+
+    h('h3',{class:'es-section'},'Prepare for the room'),
     h('div',{class:'es-grid'},
+      block('Hardest objections you will face', prep.objections.length ? h('ol',{},...prep.objections.map(o=>h('li',{},o.who?h('b',{},o.who+': '):null,o.what))) : h('p',{class:'muted'},'No strong objections surfaced.')),
+      block(t ? `Strongest case against ${lc(t.label)}` : 'Strongest case against', h('p',{},prep.caseAgainst || 'Not captured in this session.')),
+      block('Questions you can’t answer yet', list(prep.unanswered,'None flagged.')),
+      block('Who is missing from the room', list(prep.missing,'No gaps flagged.'))),
+
+    rows.length ? h('h3',{class:'es-section'},`Stakeholder tension${t?` on ${lc(t.label)}`:''}`) : null,
+    rows.length ? h('div',{class:'tscroll'},h('table',{class:'grid tension','aria-label':'Stakeholder tension matrix'},
+      h('thead',{},h('tr',{},h('th',{},'Seat'),h('th',{},'Stance'),h('th',{},'Friction and non-negotiables'),h('th',{},'What would move them'))),
+      h('tbody',{},...rows.map(r=>h('tr',{},
+        h('td',{},h('span',{style:'display:inline-flex;gap:6px;align-items:center'},h('span',{class:'dot',style:`--gc:${GROUPS[r.seat.group].color}`}),r.seat.role)),
+        h('td',{},stanceEl(r.stance)),
+        h('td',{},r.friction, r.nonneg?h('div',{class:'small muted'},'Non-negotiable: ',r.nonneg):null),
+        h('td',{},r.lever||'—')))))) : null,
+    rows.length ? h('div',{class:'btnrow',style:'margin-top:8px'},h('button',{class:'btn',onclick:()=>copyText(tensionMarkdown())},'Copy table as Markdown')) : null,
+
+    Object.keys(levers).length ? h('h3',{class:'es-section'},'What would change their mind') : null,
+    Object.keys(levers).length ? h('div',{class:'levers'},...Object.entries(LEVER_TYPES).filter(([k])=>levers[k]).map(([k,l])=>h('div',{class:'lever'},
+      h('div',{class:'label'},l),
+      h('ul',{class:'plain'},...levers[k].map(r=>h('li',{},r.lever,h('span',{class:'where'},r.seat.role))))))) : null,
+
+    S.stressTests.length ? h('h3',{class:'es-section'},'Stress tests') : null,
+    S.stressTests.length ? h('ul',{class:'plain'},...S.stressTests.map(x=>h('li',{},h('b',{},x.label+': '),x.summary))) : null,
+
+    h('div',{class:'es-grid',style:'margin-top:28px'},
       block('Where they agreed', list(d.agreed,'No clear agreement.')),
-      block('Where they disagreed', list(d.disputed,'No open disagreements.')),
-      block('What changed minds', list(d.changed,'No one changed position.')),
-      block('What the room almost missed', list(d.overlooked,'Nothing flagged.')),
-      d.risks.length ? h('div',{class:'es-block span-all'},h('div',{class:'label'},`Risk outlook, next ${S.horizon} months`),
-        h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},x.d.level),h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`),h('span',{class:'oagree'},x.d.agree))))) : null
-    ),
+      d.risks.length ? block(`Risk outlook, next ${S.horizon} months`, h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},x.d.level),
+        S.revealed.r3 ? h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`) : h('span',{}),
+        h('span',{class:'oagree'},x.d.agree))))) : block('Where they disagreed', list(d.disputed,'No open disagreements.'))),
+
     h('div',{class:'es-foot'},
-      h('span',{class:'small muted'},`Review on ${S.reviewDate}`),
+      h('div',{class:'btnrow'},
+        h('button',{class:'btn',onclick:()=>{UI.showStage=!UI.showStage; renderTable(); if (UI.showStage) $('#stage').scrollIntoView({behavior:'smooth'}); renderSummary();}},UI.showStage?'Hide the discussion':'Show how the discussion unfolded')),
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
-        h('button',{class:'btn primary',onclick:()=>setView('detail')},'Full detail →')))
+        h('button',{class:'btn primary',onclick:()=>setView('detail')},'Full detail →'))),
+    h('div',{class:'reality'},
+      h('span',{class:'small'},'After your real meeting: did this rehearsal surface what actually came up?'),
+      h('div',{class:'btnrow'},...[['yes','Yes'],['partly','Partly'],['no','No']].map(([v,l])=>h('button',{class:'pill','aria-pressed':S.reality.answer===v,onclick:()=>setReality(v)},l)),
+        S.reality.answer ? h('input',{type:'text',id:'realityNote','aria-label':'What it missed or got right',placeholder:'What it missed or got right',value:S.reality.note,oninput:e=>{S.reality.note=e.target.value;renderRecord();}}) : null))
   ].filter(Boolean));
 }
 function renderMatrix(){
@@ -1681,6 +1812,13 @@ function buildMemo(){
     if (d.discussion) L.push(d.discussion,'');
     const sec2 = (t,a) => { if (a.length){ L.push(`**${t}:**`); a.forEach(x=>L.push(`- ${x}`)); L.push(''); } };
     sec2('Where they agreed', d.agreed); sec2('Where they disagreed', d.disputed); sec2('What changed minds', d.changed); sec2('What the room almost missed', d.overlooked);
+    const pr = prepareData(); const tg = targetOption();
+    L.push('## Prepare for the room','');
+    if (pr.objections.length){ L.push('**Hardest objections:**'); pr.objections.forEach((o,i)=>L.push(`${i+1}. ${o.who?o.who+': ':''}${o.what}`)); L.push(''); }
+    if (pr.caseAgainst) L.push(`**Strongest case against ${tg?tg.label:'the leading option'}:** ${pr.caseAgainst}`,'');
+    sec2('Questions we can’t answer yet', pr.unanswered); sec2('Missing from the room', pr.missing);
+    if (tensionRows().length) L.push('## Stakeholder tension','',tensionMarkdown(),'');
+    if (S.stressTests.length){ L.push('## Stress tests',''); S.stressTests.forEach(x=>L.push(`- **${x.label}:** ${x.summary}`)); L.push(''); }
     if (d.risks.length){ L.push(`**Risk outlook, next ${S.horizon} months:**`); d.risks.forEach(r=>L.push(`- ${r.text}`)); L.push(''); }
     const warn = consensusWarnings(); if (warn.length) L.push(`**Caution:** ${warn.join(' ')} Simulated seats tend to agree more than real people; test with the people involved.`,'');
   }
@@ -1700,7 +1838,7 @@ function loadSession(e){
     if (data.tool!=='Policy Tabletop') throw new Error('not a session');
     pause();
     const base = freshState(data.mode==='live'?'live':'demo');
-    const keep = ['rawQuestion','question','questionConfirmed','decisionType','horizon','context','options','risks','seats','turns','est','current','submitted','revealed','shift','matrix','verify','steers','expertQs','consult','landing','conditions','summary','analysis','followups','camps','reviewDate','stage','started','finished'];
+    const keep = ['runMode','preferred','contextItems','stressTests','tension','prepare','reality','rawQuestion','question','questionConfirmed','decisionType','horizon','context','options','risks','seats','turns','est','current','submitted','revealed','shift','matrix','verify','steers','expertQs','consult','landing','conditions','summary','analysis','followups','camps','reviewDate','stage','started','finished'];
     for (const k of keep) if (data[k]!==undefined) base[k]=data[k];
     base.live.drafted = true; base.queue=[]; base.playing=false; base.awaitingSteer=false;
     S = base; lastTurnCount = 0; $('#tlist').replaceChildren();
@@ -1708,6 +1846,172 @@ function loadSession(e){
   }).catch(()=>toast('That file is not a saved Policy Tabletop session.'));
   e.target.value='';
 }
+
+/* ---------- authority-tagged background ---------- */
+const AUTH = {
+  binding:{label:'Binding constraint', status:'Statutory requirement', hint:'Charters, ordinances, statutes, contracts'},
+  empirical:{label:'Empirical data', status:'Empirical record', hint:'Audits, budgets, reports, data'},
+  public:{label:'Public input', status:'Public sentiment', hint:'Comments, meeting transcripts, surveys'}
+};
+function rebuildContext(){
+  S.context = S.contextItems.filter(x=>x.text.trim()).map(x=>`[${AUTH[x.type].label.toUpperCase()}: ${x.name||'Untitled'}]\n${x.text.trim()}`).join('\n\n');
+}
+function addContextItem(item){ S.contextItems.push({type:'empirical', name:'', text:'', ...item}); rebuildContext(); }
+function contextBlock(){
+  if (!S.contextItems.length) addContextItem({});
+  return h('div',{class:'ctxlist'},
+    h('p',{class:'small muted'},'Tag each item so the seats weigh it properly: binding constraints first, then data, then public input.'),
+    ...S.contextItems.map((it,i)=>h('div',{class:'ctxitem'},
+      h('div',{class:'ctxrow'},
+        h('select',{id:`ctxType${i}`,'aria-label':'Authority type',onchange:e=>{it.type=e.target.value;rebuildContext();}},...Object.entries(AUTH).map(([k,a])=>h('option',{value:k,selected:it.type===k},a.label))),
+        h('input',{type:'text',id:`ctxName${i}`,'aria-label':'Name of this source',placeholder:'Name, e.g. "City charter section 4"',value:it.name,oninput:e=>{it.name=e.target.value;rebuildContext();}}),
+        h('button',{class:'x','aria-label':'Remove this source',onclick:()=>{S.contextItems.splice(i,1);rebuildContext();renderSetupForce();}},'×')),
+      h('div',{class:'small muted'},AUTH[it.type].hint),
+      h('textarea',{id:`ctxText${i}`,rows:4,'aria-label':'Text of this source',placeholder:'Paste the text, notes or a transcript.',oninput:e=>{it.text=e.target.value;rebuildContext();}},it.text))),
+    h('div',{class:'btnrow'},
+      h('button',{class:'btn',type:'button',onclick:()=>{addContextItem({});renderSetupForce();}},'+ Add another source'),
+      h('label',{class:'btn',for:'ctxFile'},'Add text files',h('input',{id:'ctxFile',type:'file',hidden:true,multiple:true,accept:'.txt,.md,.csv,text/plain,text/markdown,text/csv',onchange:readCtxFiles})))
+  );
+}
+function readCtxFiles(e){
+  const files=[...e.target.files]; if (!files.length) return;
+  Promise.all(files.map(f=>f.text().then(t=>({name:f.name.replace(/\.[^.]+$/,''), text:t})))).then(parts=>{
+    S.contextItems = S.contextItems.filter(x=>x.text.trim()||x.name.trim());
+    parts.forEach(p=>addContextItem({type:'empirical', ...p}));
+    renderSetupForce(); toast(`Added ${files.length} file${files.length>1?'s':''}. Check each one's tag.`);
+  });
+  e.target.value='';
+}
+
+/* ---------- grounding and the citation drawer ---------- */
+function findQuote(q){
+  const norm = x=>String(x).toLowerCase().replace(/[“”"']/g,'').replace(/\s+/g,' ').trim();
+  const nq = norm(q); if (nq.length<12) return null;
+  for (const it of S.contextItems){
+    if (!norm(it.text).includes(nq)) continue;
+    const raw = it.text, lower = raw.toLowerCase().replace(/\s+/g,' ');
+    const at = lower.indexOf(nq.slice(0,24));
+    const window = at>=0 ? raw.replace(/\s+/g,' ').slice(Math.max(0,at-220), at+nq.length+220) : raw.slice(0,600);
+    return {item:it.name||'Untitled', type:it.type, window};
+  }
+  return null;
+}
+function groundingFor(name, meta){
+  if (meta) return {status:AUTH[meta.type].status, section:meta.item, excerpt:meta.window};
+  const n = String(name||'').toLowerCase();
+  const item = S.contextItems.find(x=>x.name && n.includes(x.name.toLowerCase().slice(0,18)));
+  if (item) return {status:AUTH[item.type].status, section:item.name, excerpt:item.text.replace(/\s+/g,' ').slice(0,700)};
+  if (n.includes('internal record')){
+    if (/budget|ledger|audit|report|data|dashboard|survey|schedule/.test(n)) return {status:'Empirical record (internal, not provided here)'};
+    if (/comment|transcript|hearing|public input/.test(n)) return {status:'Public sentiment (internal, not provided here)'};
+    return {status:'Internal record (not provided here)'};
+  }
+  if (/\b(act|statute|ordinance|charter|regulation|code)\b|title vi/.test(n)) return {status:'Statutory requirement'};
+  return {status:'Guidance or standard'};
+}
+let drawerReturn = null;
+function openDrawer(name, meta){
+  const g = groundingFor(name, meta), url = srcUrl(name);
+  const d = $('#drawer');
+  drawerReturn = document.activeElement;
+  d.replaceChildren(...[
+    h('div',{class:'dhead'},h('div',{class:'label'},'Source'),h('button',{class:'x',id:'drawerClose','aria-label':'Close source panel',onclick:closeDrawer},'×')),
+    h('h2',{id:'drawerTitle'},name),
+    g.section && g.section!==name ? h('p',{class:'small muted'},'Section: ',g.section) : null,
+    h('div',{class:'dstatus'},h('span',{class:'label'},'Grounding'),h('span',{class:'gstat'},g.status)),
+    g.excerpt ? h('div',{},h('div',{class:'label'},meta?'Passage the seat relied on':'From your uploaded material'),h('blockquote',{class:'quote dq'},g.excerpt)) :
+      h('p',{class:'small muted'},'No passage from this source is stored in the session. Open the source to check the claim yourself.'),
+    url ? h('p',{},h('a',{class:'cite',href:url,target:'_blank',rel:'noopener noreferrer'},'Open the source ↗')) : null
+  ].filter(Boolean));
+  d.hidden = false;
+  setTimeout(()=>$('#drawerClose')?.focus(),0);
+}
+function closeDrawer(){ $('#drawer').hidden = true; if (drawerReturn?.focus) drawerReturn.focus(); }
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('#drawer').hidden) closeDrawer(); });
+function textWithCites(txt){
+  const parts = String(txt||'').split(/\[Source:\s*([^\]]+)\]/i);
+  return parts.map((p,i)=> i%2 ? citeEl(p.trim()) : p);
+}
+
+/* ---------- agreement check and stress tests ---------- */
+function lowAgreement(){
+  if (!S.revealed.r1) return false;
+  const st = statsFor(S.revealed.r3 ? S.current : S.est.r1).filter(Boolean);
+  const tight = st.filter(x=>x.spread<=LOW).length;
+  const pushback = S.turns.filter(t=>t.type==='challenge').length;
+  const debateDone = ['r3','outputs'].includes(S.stage) || S.finished;
+  return tight>=2 || (debateDone && pushback<2) || consensusWarnings().some(w=>w.startsWith('No seat opposes'));
+}
+function renderAgreeBanner(){
+  const b = $('#agreeBanner'); if (!b) return;
+  const show = S.started && lowAgreement();
+  b.hidden = !show; if (!show) return;
+  const done = S.stressTests.some(x=>x.kind==='opposing');
+  b.replaceChildren(
+    h('div',{},h('b',{},'Low disagreement. '),'The simulated seats agree closely. In AI role-play, agreement often reflects one model’s habits rather than real alignment.'),
+    done ? h('span',{class:'small'},'Stress test done: see the summary.') :
+      h('button',{class:'btn',disabled:!!S.live.busy,onclick:()=>runConstraint('opposing')},'Stress-test with opposing constraints'));
+}
+const CONSTRAINTS = {
+  budget:{label:'Budget cut', prompt:'The budget for this is cut in half and no new staff can be hired.'},
+  legal:{label:'Legal constraint', prompt:'A new legal requirement applies: every automated answer to a resident must be explainable, recorded and open to appeal.'},
+  worst:{label:'Worst case', prompt:'The worst realistic outcome happens within the time horizon: the chosen approach fails in public and harms residents.'},
+  opposing:{label:'Opposing constraints', prompt:'Each seat must make the strongest honest case AGAINST the option under test, naming its most serious weakness.'}
+};
+async function runConstraint(kind){
+  const c = CONSTRAINTS[kind]; if (!c || !S.started) return;
+  const target = targetOption();
+  pushTurn({seat:'staff', type:'steer', text:`Stress test: ${c.label}. ${c.prompt}`, source:'Staff-provided'});
+  logSteer('Stress test', c.label, SAMPLE?'Seats re-evaluated':'Logged');
+  renderAll();
+  if (S.mode==='demo' && DEMO.constraints[kind]){
+    const d = DEMO.constraints[kind];
+    d.turns.forEach(t=>pushTurn({seat:t.seat, type:'position', text:t.text, source:t.src||null}));
+    pushTurn({seat:'mod', type:'moderator', text:d.summary, source:null});
+    S.stressTests.push({kind, label:c.label, summary:d.summary});
+  } else if (SAMPLE){
+    busy(`Stress test: ${c.label}…`);
+    try{
+      const seats = inSeats();
+      const r = await askJSON(`You run Policy Tabletop. The facilitator adds a stress test: "${c.prompt}"${target?` The option under test is "${target.label}".`:''}\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id}: ${seatBrief(s)}`).join('\n\n')}\n\nTranscript so far:\n${transcriptText(8000)}\n\nPick the 3 to 5 seats most affected. Each says in under 40 words how this changes its view, citing only its own numbered sources. Then write a two-sentence plain summary of how the room shifts.\nReturn only JSON: {"turns":[{"seat":"s1","text":"...","source_index":0}],"summary":"..."}\n\n${GUARD}`,'default');
+      for (const t of asList(r.turns)){ const s=seatById(String(t.seat)); if (s) pushTurn({seat:s.id, type:'position', text:String(t.text||''), source:srcFrom(s,t.source_index)}); }
+      const summary = String(r.summary||'The seats reconsidered their views.');
+      pushTurn({seat:'mod', type:'moderator', text:summary, source:null});
+      S.stressTests.push({kind, label:c.label, summary});
+    }catch(e){ toast(errCopy(e)); }
+    S.live.busy = null;
+  } else {
+    pushTurn({seat:'mod', type:'moderator', text:'Stress test logged. Live replies need a live connection.', source:null});
+  }
+  renderAll();
+}
+
+/* ---------- the executive brief ---------- */
+const LEVER_TYPES = {evidence:'Evidence', legal:'Legal guarantee', funding:'Funding', process:'Process change'};
+function targetOption(){ return S.options.find(o=>o.id===S.preferred) || leadingOption() || null; }
+function tensionRows(){
+  const t = targetOption();
+  return inSeats().map(s=>{ const r = S.tension.find(x=>x.seat===s.id) || {}; return {seat:s, stance: t ? (S.landing[t.id]?.[s.id]||'') : '', friction:r.friction||'', nonneg:r.nonneg||'', lever:r.lever||'', type:LEVER_TYPES[r.type]?r.type:(r.lever?'process':'')}; }).filter(r=>r.friction||r.lever||r.stance);
+}
+function tensionMarkdown(){
+  const t = targetOption();
+  const L = [`Stakeholder tension${t?` on "${t.label}"`:''} (simulated perspectives)`,'','| Seat | Stance | Friction and non-negotiables | What would move them |','|---|---|---|---|'];
+  tensionRows().forEach(r=>L.push(`| ${r.seat.role} | ${({support:'Supports',conditional:'With conditions',oppose:'Opposes'})[r.stance]||'—'} | ${[r.friction, r.nonneg?`Non-negotiable: ${r.nonneg}`:''].filter(Boolean).join(' ')} | ${r.lever||'—'} |`));
+  return L.join('\n');
+}
+function prepareData(){
+  const p = S.prepare || {};
+  const t = targetOption();
+  const objections = asList(p.objections).map(o=>typeof o==='string'?{who:'',what:o}:{who:String(o.who||''),what:String(o.what||'')}).filter(o=>o.what).slice(0,3);
+  if (!objections.length && t) inSeats().filter(s=>S.landing[t.id]?.[s.id]==='oppose').slice(0,3).forEach(s=>{ const r=S.tension.find(x=>x.seat===s.id); objections.push({who:s.role, what:r?.friction||'Opposes this option.'}); });
+  return {
+    objections,
+    caseAgainst: String(p.case_against||p.caseAgainst||''),
+    unanswered: asList(p.unanswered).map(String).slice(0,4).concat(asList(p.unanswered).length?[]:S.matrix.ku.slice(0,3).map(x=>x.text)),
+    missing: asList(p.missing).map(String).slice(0,3)
+  };
+}
+function setReality(ans){ S.reality.answer = ans; renderSummary(); renderRecord(); }
 
 /* ---------- runtime: inside Claude, or self-hosted ---------- */
 const HOSTED = !(window.claude && window.claude.use);
@@ -1823,7 +2127,7 @@ $('#sideS').onclick = ()=>setSide('synthesis');
 try{ new IntersectionObserver(([e])=>{ $('#stickyBar').classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0); }).observe($('#qText')); }catch{}
 $('#tabSummary').onclick = ()=>setView('summary');
 $('#tabDetail').onclick = ()=>setView('detail');
-$('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
+$('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Key exchanges only' : 'Showing everything'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
 $('#modeDemo').onclick = ()=>{ if (S.mode!=='demo') setMode('demo'); };
 $('#modeLive').onclick = ()=>{ if (S.mode!=='live') setMode('live'); };
 renderAll();
