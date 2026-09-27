@@ -20,7 +20,7 @@ This repository deploys as-is to Vercel's free Hobby plan (personal, non-commerc
 
 ### Faster and still nearly free: DeepSeek V4.1 Flash
 
-Free models are shared and often busy, which makes sessions slow. The server now uses DeepSeek V4.1 Flash first whenever your OpenRouter account has credit, and falls back to free models when it does not. Add a few dollars of credit to switch it on; no settings needed. It costs about $0.035 per million input tokens and $0.29 per million output tokens, roughly one cent per full session. Seat turns then run three at a time, and the free models stay as automatic backup.
+Free models are shared and often busy, which makes sessions slow. The server now uses DeepSeek V4.1 Flash first whenever your OpenRouter account has credit, and falls back to free models when it does not. Add a few dollars of credit to switch it on; no settings needed. It costs about $0.035 per million input tokens and $0.29 per million output tokens, roughly one cent per full session. Seat turns then run six at a time (set `TABLETOP_PARALLEL` to change this), requests go to the fastest host, and a stalled request is retried once before the free models step in as backup.
 
 ### Other providers
 

@@ -11,6 +11,7 @@
 //                       if every free model is busy, the request goes to Claude Haiku (a fraction of a cent).
 //   TABLETOP_PASSCODE   optional. Live sessions need this passcode; the example session never does.
 //   TABLETOP_ECONOMY    optional, Claude only. Set to 1 to run every Claude call on the lowest-cost model.
+//   TABLETOP_PARALLEL   optional. How many seat turns run at once on a paid model (default 6). Free models always run one at a time.
 
 const CLAUDE = { quick: "claude-haiku-4-5-20251001", default: "claude-sonnet-5", complex: "claude-opus-5-5" };
 // DeepSeek V4.1 Flash first: fast, dependable and about one cent per session (needs OpenRouter credit).
@@ -32,6 +33,7 @@ const PASS = process.env.TABLETOP_PASSCODE || "";
 const ECONOMY = process.env.TABLETOP_ECONOMY === "1";
 const BUDGET_MS = 240000;                 // stay under Vercel's 300-second limit (see vercel.json)
 const MAX_MODELS_PER_REQUEST = 10;
+const PARALLEL = Math.max(1, Math.min(12, Number(process.env.TABLETOP_PARALLEL) || 6));
 const SYSTEM = "You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value: no explanation, no markdown fences, no thinking out loud.";
 
 export const config = { maxDuration: 300 };
@@ -151,7 +153,8 @@ async function callOpenRouterModel(model, prompt, wantJson, ms, referer) {
         model,
         max_tokens: 6000,
         temperature: 0.4,
-        reasoning: { effort: "low", exclude: true },
+        // Paid model: skip hidden reasoning and route to the fastest host. Free models: keep reasoning light.
+        ...(isFree(model) ? { reasoning: { effort: "low", exclude: true } } : { reasoning: { enabled: false }, provider: { sort: "throughput" } }),
         ...(wantJson ? { response_format: { type: "json_object" } } : {}),
         messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }],
       }),
@@ -167,11 +170,15 @@ async function viaOpenRouter(prompt, wantJson, referer, deadline) {
   const models = await candidateModels();
   const tried = [];
   let lastDetail = "", dailyCap = false;
-  for (const model of models) {
+  // A paid model gets a second try (OpenRouter can route it to another host) before falling back to free models.
+  const queue = models.flatMap(m => isFree(m) ? [m] : [m, m]);
+  for (let qi = 0; qi < queue.length; qi++) {
+    const model = queue[qi];
+    if (cooldown.get(model) > Date.now() && !isFree(model)) continue;
     const left = deadline - Date.now();
     if (left < 8000) break;
-    // Paid models are fast and dependable; free ones can hang, so give each a shorter window before moving on.
-    const perTry = isFree(model) ? 45000 : 90000;
+    // Paid models answer in seconds; if one stalls, retry quickly. Free ones can hang, so cap each try.
+    const perTry = isFree(model) ? 45000 : 60000;
     const out = await callOpenRouterModel(model, prompt, wantJson, Math.min(left - 3000, perTry), referer);
     tried.push(model);
     if (out.ok) {
@@ -184,10 +191,11 @@ async function viaOpenRouter(prompt, wantJson, referer, deadline) {
     }
     lastDetail = `${model}: ${out.detail}`;
     if (/per[- ]?day|free-models-per-day/i.test(out.detail)) { dailyCap = true; break; } // every free model shares this cap
-    if (out.status === 402) credit = { known: true, paid: false, at: Date.now() }; // out of credit: stop trying paid models for a while
-    cooldown.set(model, Date.now() + (out.status === 429 ? 60 : 180) * 1000);
+    if (out.status === 402) { credit = { known: true, paid: false, at: Date.now() }; cooldown.set(model, Date.now() + 600000); continue; } // out of credit
+    if (!isFree(model) && queue[qi + 1] === model && out.status !== 400) continue; // retry the paid model once before cooling it down
+    cooldown.set(model, Date.now() + (isFree(model) ? (out.status === 429 ? 60 : 180) : 30) * 1000);
   }
-  return { failed: true, dailyCap, detail: `${tried.length} free model${tried.length === 1 ? "" : "s"} tried. Last: ${lastDetail}` };
+  return { failed: true, dailyCap, detail: `${tried.length} model attempt${tried.length === 1 ? "" : "s"}. Last: ${lastDetail}` };
 }
 
 /* ---------- Anthropic ---------- */
@@ -213,7 +221,7 @@ export default async function handler(req, res) {
     // parallel: how many seat turns the page may run at once. Free models get one at a time to avoid rate limits.
     const paidOk = PROVIDER === "openrouter" && configured() ? await hasCredit() : true;
     const freeFirst = PROVIDER === "openrouter" && (isFree(PREFERRED[0]) || !paidOk);
-    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(paidOk), parallel: freeFirst ? 1 : 3, credit: PROVIDER === "openrouter" ? (credit.known ? credit.paid : "unknown") : undefined });
+    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(paidOk), parallel: freeFirst ? 1 : PARALLEL, credit: PROVIDER === "openrouter" ? (credit.known ? credit.paid : "unknown") : undefined });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!configured()) return res.status(503).json({ error: "Server is missing an API key for the selected provider" });
@@ -241,5 +249,6 @@ export default async function handler(req, res) {
     if (out.dailyCap) return res.status(429).json({ error: "daily_cap", detail: out.detail });
     return res.status(503).json({ error: "busy", detail: out.detail });
   }
-  return res.status(200).json({ text: out.text, model: out.model || "", fallback: !!out.fallback });
+  res.setHeader("x-tabletop-ms", String(Date.now() - (deadline - BUDGET_MS)));
+  return res.status(200).json({ text: out.text, model: out.model || "", fallback: !!out.fallback, ms: Date.now() - (deadline - BUDGET_MS) });
 }
