@@ -610,6 +610,23 @@ button.ocard:hover{border-color:var(--ink-3)}
 .seg2 button[aria-checked="true"]{background:var(--surface-2);color:var(--ink)}
 .transcript{position:relative}
 .newturns{position:absolute;left:50%;transform:translateX(-50%);bottom:56px;z-index:3;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-size:.8rem;font-weight:600;padding:6px 14px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.tablewhy{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:10px;background:var(--surface-2);font-size:.92rem;max-width:760px}
+.tablewhy .ic{width:18px;height:18px;margin-top:2px;color:var(--ink-2)}
+.grouprow{display:flex;gap:8px;flex-wrap:wrap}
+.gchip{display:inline-flex;gap:6px;align-items:center;font-size:.8rem;color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.gchip i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--gc);display:inline-block}
+.gchip i.dash{border-style:dashed}
+.seatlist{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-width:820px}
+.seatrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.seatrow.off{opacity:.5}
+.seatrow.off b{text-decoration:line-through}
+.dot.big{width:12px;height:12px;margin-top:5px}
+.sr-top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.sr-main p{margin-top:3px}
+.sr-btn{padding:4px 10px;font-size:.8rem}
+.sugrow{display:flex;gap:8px;flex-wrap:wrap}
+.sugchip{border:1px dashed var(--line-2);background:transparent;border-radius:999px;padding:6px 12px;font-size:.84rem;text-align:left}
+.sugchip:hover{border-color:var(--ink)}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -1238,16 +1255,20 @@ function applySetupParts(r, onlyMissing){
     .map((x,i)=>({id:'R'+(i+1), short:String(pick(x,['short','name','title','label'])||`Risk ${i+1}`), text:String(pick(x,['text','description','event','detail'])||pick(x,['short','name'])||'')}));
   const seats = asList(pick(r,['seats','perspectives','stakeholders','participants','roles'])).slice(0,12)
     .map((x,i)=>{ const role=String(pick(x,['role','name','title','perspective_name'])||`Seat ${i+1}`); const group=normGroup(pick(x,['group','type','category'])||(/red team/i.test(role)?'redteam':'')); const src=asList(pick(x,['sources','grounding_sources','references'])).map(v=>typeof v==='string'?v:String(pick(v,['title','name'])||'')).filter(Boolean).slice(0,3);
-      return {id:'s'+(i+1), role, group, perspective:String(pick(x,['perspective','description','view','stance'])||''), sources:src, included:true, abbr: group==='redteam'?'RED':group==='absent'?'ABS':abbr(role)}; });
+      return {id:'s'+(i+1), role, group, perspective:String(pick(x,['perspective','description','view','stance'])||''), why:String(pick(x,['why','reason','rationale'])||''), sources:src, included:true, abbr: group==='redteam'?'RED':group==='absent'?'ABS':abbr(role)}; });
   if (!onlyMissing || S.options.length<2) { if (opts.length) S.options = opts; }
   if (!onlyMissing || S.risks.length<3) { if (risks.length) S.risks = risks; }
   if (!onlyMissing || S.seats.length<(S.runMode==='quick'?4:6)) { if (seats.length) S.seats = seats; }
+  const tw = pick(r,['table_rationale','rationale','table_reasoning']); if (tw) S.tableWhy = String(tw);
+  const sug = asList(pick(r,['also_consider','suggested_seats','suggestions'])).map(x=>typeof x==='string'?{role:x}:x).filter(x=>x&&pick(x,['role','name'])).slice(0,4)
+    .map(x=>({role:String(pick(x,['role','name'])), group:normGroup(pick(x,['group','type'])||'external'), perspective:String(pick(x,['perspective','description'])||''), why:String(pick(x,['why','reason'])||'')}));
+  if (sug.length) S.seatSuggestions = sug;
   S.shift = S.risks.map(()=>0);
 }
 function ensureKeySeats(){
   const ctxSource = S.context ? 'Staff notes for this session (internal record)' : 'Public reporting on similar decisions elsewhere';
-  if (!S.seats.some(x=>x.group==='absent')) S.seats.push({id:'sa'+S.seats.length, role:'People most affected (absent voice)', group:'absent', perspective:'Speaks for the people this decision affects most, who are least likely to be heard.', sources:[ctxSource], included:true, abbr:'ABS'});
-  if (!S.seats.some(x=>x.group==='redteam')) S.seats.push({id:'sr'+S.seats.length, role:'Red Team', group:'redteam', perspective:'Argues how each option could fail.', sources:[ctxSource], included:true, abbr:'RED'});
+  if (!S.seats.some(x=>x.group==='absent')) S.seats.push({id:'sa'+S.seats.length, role:'People most affected (absent voice)', group:'absent', perspective:'Speaks for the people this decision affects most, who are least likely to be heard.', why:'Added so the people most affected are represented, even though they are rarely in the room.', sources:[ctxSource], included:true, abbr:'ABS'});
+  if (!S.seats.some(x=>x.group==='redteam')) S.seats.push({id:'sr'+S.seats.length, role:'Red Team', group:'redteam', perspective:'Argues how each option could fail.', why:'Added so someone argues against every option and the table does not agree too easily.', sources:[ctxSource], included:true, abbr:'RED'});
   S.seats.forEach((x,i)=>{ x.id = 's'+(i+1); });
 }
 async function draftSetup(){
@@ -1267,7 +1288,9 @@ Return only JSON of this shape:
 {"sharpened":"one precise decision question",
  "alternatives":["2 other ways to frame the same decision, each one plain sentence ending in a question mark"],
  "options":[{"label":"≤4 words","desc":"one sentence"}],
- "seats":[{"role":"role name","group":"internal|external|absent|redteam","perspective":"one sentence","sources":["2 or 3 grounding sources"]}],
+ "seats":[{"role":"role name","group":"internal|external|absent|redteam","perspective":"one sentence","why":"one plain sentence on why this perspective belongs at this table for this decision","sources":["2 or 3 grounding sources"]}],
+ "table_rationale":"two plain sentences on how you balanced the table: who carries it out, who pays, who is affected, who pushes back",
+ "also_consider":[{"role":"a perspective you left out but could add","group":"internal|external|absent","perspective":"one sentence","why":"one sentence on what it would add"}],
  "risks":[{"short":"≤4 words","text":"one event that either happens or not within the horizon"}]}
 
 Requirements: 3 or 4 options, including a minimal or "do nothing more" option. ${S.runMode==='quick'?'Exactly 6 seats':'8 to 12 seats'}, each named as a perspective (for example "Labor perspective", never the name of a real organization or person): internal perspectives (e.g. IT, security, legal, affected departments, and the budget office); external perspectives (industry, civil society, partners, other levels of government, and labor or staff unions when jobs are affected); an elected-official or political-exposure perspective when the decision is publicly visible; exactly one seat with group "absent" for the people most affected but least represented; exactly one seat with group "redteam" named "Red Team" whose job is to argue how each option fails. Exactly 5 risks. Sources must be real public documents you are confident exist (laws, standards, official guidance) or internal records named generically and marked "(internal record)", using the staff context where possible. Seats are roles, never real named people. Invent no statistics. If the topic is politically contested, spread seats across the range of views.${funOn()?' FUN MODE: this is a light-hearted session. Seat roles may be playful and specific (still roles, never real people), and the options can be fun, but keep them real choices. Keep everything PG.':''}`;
@@ -1715,6 +1738,7 @@ function renderSetup(){
   if (p.contains(document.activeElement) && p.dataset.sig===setupSig()) return; // don't rebuild while typing
   p.dataset.sig = setupSig();
   const kids = [];
+  if ((UI.setupPage||0)>=2 && (S.mode==='demo' || S.live.drafted)){ p.replaceChildren(tableBlock()); return; }
   if (S.mode==='live' && (!S.live.drafted || !UI.setupPage)){
     kids.push(h('div',{class:'rhead',style:'margin-bottom:18px'},h('h2',{},'Describe your decision'),h('p',{},'A sentence or two is enough. The tool drafts the rest, and you review it on the next screen.')));
     kids.push(intakeBlock());
@@ -1777,6 +1801,7 @@ function liveStatusBlock(){
     h('p',{class:'small muted'},'The key is sent only to the provider you pick. Anyone using this browser could use it while connected, so set a spend limit. Free OpenRouter models are rate-limited and may log prompts; never paste sensitive material.'));
 }
 function setSetupPage(i){
+  if (S.mode==='demo' && i<1) i = 1;
   const d = i < (UI.setupPage||0) ? -1 : 1; UI.setupPage = i;
   renderSetupForce(); animateIn($('#setupPanel'), d); window.scrollTo({top:0}); renderAppbar();
 }
@@ -1797,18 +1822,55 @@ function reviewBlock(){
         const kids=[h('span',{class:'otag'},'O'+(i+1)),h('b',{},o.label||'Untitled option'),o.desc?h('span',{},o.desc):null];
         return live ? h('button',{class:'ocard','aria-pressed':String(on),onclick:()=>{S.preferred = S.preferred===o.id?'':o.id; renderSetupForce();}},...kids) : h('div',{class:'ocard','aria-pressed':String(on)},...kids); }))),
     h('div',{class:'rsec'},h('div',{class:'label'},`At the table · ${inSeats().length} seats`),
-      live && UI.voices && SAMPLE && SAMPLE.json===apiJson ? h('div',{class:'mixpick'},
-        h('div',{class:'seg2',role:'radiogroup','aria-label':'Voices'},...[['mixed','Mixed AI models'],['single','One model']].map(([v,l])=>h('button',{role:'radio','aria-selected':String(UI.mix===v),'aria-checked':String(UI.mix===v),onclick:()=>{UI.mix=v;renderSetupForce();}},l))),
-        h('span',{class:'small muted'},UI.mix==='mixed'?'Seats are voiced by different companies’ models, so they don’t just agree with themselves. A separate model writes the brief and another checks it.':'Every seat uses the same model. Faster to set up, but seats tend to agree too easily.')) : null,
-      (()=>{ const mix = live && mixedOn(); if (mix) assignVoices(); return h('div',{class:'seatchips'},...inSeats().map(s=>h('span',{class:'seatchip '+s.group},h('i',{style:`--gc:${GROUPS[s.group].color}`}),s.role, mix && UI.voices[s.voice] ? h('em',{class:'mtag'},modelName(UI.voices[s.voice])) : null))); })(),
-      h('div',{class:'checkrow'},h('span',{},hasAbsent?'✓ Absent voice included':'✗ No absent voice'),h('span',{},hasRed?'✓ Red Team included':'✗ No Red Team'),h('span',{},S.runMode==='quick'?'Quick brief':'Full workshop'), funOn() ? h('span',{},`${funStyle().emoji} ${funStyle().label}`) : null),
-      (!hasAbsent||!hasRed) ? h('p',{class:'note warn'},'Include one absent-voice seat and one Red Team seat. They guard against missing voices and easy agreement.') : null),
+      h('p',{class:'small muted'},'Next, you’ll see who we invited and why, and can add or remove seats.')),
     h('div',{class:'rsec'},h('div',{class:'label'},`Risks to watch · ${S.horizon} months`),
       h('div',{class:'riskchips'},...S.risks.map(r=>h('span',{},r.short)))),
     det('edit','Edit options, risks and seats', editorGrid()),
     h('div',{class:'btnrow'},
       !live ? h('button',{class:'btn',onclick:showFinished},'Skip to the results') : null,
       h('label',{class:'btn',for:'loadSession1'},'Load a saved session',h('input',{type:'file',id:'loadSession1',accept:'.json,application/json',hidden:true,onchange:loadSession})))
+  );
+}
+const GROUP_WHY = {internal:'An office that would carry this out, pay for it or answer for it.', external:'People or organizations outside government that this decision affects.', absent:'The people most affected, who are rarely in the room.', redteam:'Argues how each option fails, so the table does not agree too easily.'};
+const seatWhy = s => s.why || s.perspective || GROUP_WHY[s.group] || '';
+function tableBlock(){
+  const live = S.mode==='live';
+  const seats = S.seats;
+  const inc = inSeats();
+  const hasAbsent = inc.some(s=>s.group==='absent'), hasRed = inc.some(s=>s.group==='redteam');
+  const counts = Object.fromEntries(Object.keys(GROUPS).map(k=>[k, inc.filter(s=>s.group===k).length]));
+  const mix = live && mixedOn(); if (mix) assignVoices();
+  const sug = (S.seatSuggestions||[]).filter(x=>!S.seats.some(s=>s.role.toLowerCase()===x.role.toLowerCase()));
+  const addSeat = ({role, group, perspective, why}) => {
+    if (S.seats.length>=12){ toast('The table holds up to 12 seats.'); return; }
+    S.seats.push({id:'s'+(S.seats.length+1)+'_'+(Date.now()%1000), role, group:group||'external', perspective:perspective||'', why:why||'Added by you.', sources:[], included:true, abbr: group==='redteam'?'RED':group==='absent'?'ABS':abbr(role)});
+    S.seats.forEach((x,i)=>{ if (!/_/.test(x.id)) x.id='s'+(i+1); });
+    renderSetupForce(); renderTable();
+  };
+  const tableWhy = S.tableWhy || (live ? '' : 'The example table mixes the offices that would run and pay for a review with outside groups, adds the residents least likely to be heard, and a Red Team to argue against every option.');
+  return h('div',{class:'review'},
+    h('div',{class:'rhead'},h('h2',{},'Is this the right table?'),h('p',{},live ? 'Here’s who we invited and why. Remove anyone who doesn’t belong and add anyone who’s missing, then start.' : 'Here’s who sits at the example table and why. The example table is fixed; in your own session you can add or remove seats.')),
+    tableWhy ? h('div',{class:'tablewhy'},icon('table'),h('p',{},tableWhy)) : null,
+    live && UI.voices && SAMPLE && SAMPLE.json===apiJson ? h('div',{class:'mixpick'},
+        h('div',{class:'seg2',role:'radiogroup','aria-label':'Voices'},...[['mixed','Mixed AI models'],['single','One model']].map(([v,l])=>h('button',{role:'radio','aria-selected':String(UI.mix===v),'aria-checked':String(UI.mix===v),onclick:()=>{UI.mix=v;renderSetupForce();}},l))),
+        h('span',{class:'small muted'},UI.mix==='mixed'?'Seats are voiced by different companies’ models, so they don’t just agree with themselves. A separate model writes the brief and another checks it.':'Every seat uses the same model. Faster to set up, but seats tend to agree too easily.')) : null,
+    h('div',{class:'grouprow'},...Object.entries(GROUPS).map(([k,g])=>h('span',{class:'gchip'},h('i',{class:k==='absent'?'dash':'',style:`--gc:${g.color}`}),`${counts[k]} ${k==='internal'?'staff':k==='external'?'outside':g.label.toLowerCase()}`))),
+    h('ul',{class:'seatlist'},...seats.map((s,i)=>h('li',{class:'seatrow'+(s.included?'':' off')},
+      h('span',{class:'dot big',style:`--gc:${GROUPS[s.group].color}`}),
+      h('div',{class:'sr-main'},
+        h('div',{class:'sr-top'},h('b',{},s.role),h('span',{class:'small muted'},GROUPS[s.group].label), mix && s.included && UI.voices[s.voice] ? h('em',{class:'mtag'},modelName(UI.voices[s.voice])) : null),
+        h('p',{class:'small'},h('span',{class:'muted'},'Why: '),seatWhy(s))),
+      live ? h('button',{class:'btn sr-btn',type:'button','aria-label':(s.included?'Remove ':'Add back ')+s.role,onclick:()=>{ s.included=!s.included; renderSetupForce(); renderTable(); }},s.included?'Remove':'Add back') : null))),
+    (!hasAbsent||!hasRed) ? h('p',{class:'note warn'},`${!hasAbsent?'There is no absent-voice seat for the people most affected. ':''}${!hasRed?'There is no Red Team to argue against every option. ':''}Consider adding ${!hasAbsent&&!hasRed?'them':'it'} back; they guard against missing voices and easy agreement.`) : null,
+    live && S.runMode==='quick' && inc.length>6 ? h('p',{class:'small muted'},`A quick brief works best with about 6 seats. You have ${inc.length}; it will take a little longer.`) : null,
+    live && sug.length ? h('div',{class:'rsec'},h('div',{class:'label'},'Suggested additions'),
+      h('div',{class:'sugrow'},...sug.map(x=>h('button',{class:'sugchip',type:'button',title:x.why||x.perspective,onclick:()=>addSeat(x)},'+ ',x.role, x.why?h('span',{class:'small muted'},` · ${oneLine(x.why,70)}`):null)))) : null,
+    live ? det('addown','Add your own seat', h('div',{class:'steerform'},
+      h('div',{class:'row2'},h('input',{type:'text',id:'nsRole','aria-label':'Role',placeholder:'Role, e.g. "Small landlords perspective"'}),
+        h('select',{id:'nsGroup','aria-label':'Group'},...Object.entries(GROUPS).map(([k,g])=>h('option',{value:k},g.label)))),
+      h('input',{type:'text',id:'nsPersp','aria-label':'Perspective',placeholder:'Their view in one sentence (optional)'}),
+      h('div',{class:'btnrow'},h('button',{class:'btn primary',type:'button',onclick:()=>{ const role=($('#nsRole').value||'').trim(); if (!role){ toast('Name the role first.'); return; } addSeat({role, group:$('#nsGroup').value, perspective:($('#nsPersp').value||'').trim(), why:'Added by you.'}); }},'Add seat'),h('span',{class:'small muted'},'Seats are roles, never real people. It cites only sources you list under “Edit options, risks and seats.”')))) : null,
+    h('p',{class:'small muted'},`${inc.length} seat${inc.length===1?'':'s'} at the table.${inc.length<3?' Add at least 3 to start.':''}`)
   );
 }
 function readyBlock(){
@@ -2912,14 +2974,20 @@ function renderAppbar(){
     const sp = UI.setupPage||0;
     const start = ()=>{ S.questionConfirmed=true; startTabletop(); };
     if (S.started){ L = back('How it works', ()=>go('welcome')); C = h('span'); R = next('Back to the debate', ()=>go('debate')); }
-    else if (S.mode==='demo'){ L = back('How it works', ()=>go('welcome')); C = h('span',{class:'where'},'Example'); R = next('Start the example', start, {short:'Start'}); }
+    else if (S.mode==='demo'){
+      if (sp>=2){ L = back('Review', ()=>setSetupPage(1)); C = dots(['Review','Table'], 1, j=>{ if (!j) setSetupPage(1); }); R = next('Looks right, start the example', start, {short:'Start'}); }
+      else { L = back('How it works', ()=>go('welcome')); C = dots(['Review','Table'], 0, j=>{ if (j) setSetupPage(2); }); R = next('Check the table', ()=>setSetupPage(2), {short:'Next'}); }
+    }
     else if (!sp || !S.live.drafted){
-      L = back('How it works', ()=>go('welcome')); C = dots(['Describe','Review'], 0, j=>{ if (j && S.live.drafted) setSetupPage(1); });
+      L = back('How it works', ()=>go('welcome')); C = dots(['Describe','Review','Table'], 0, j=>{ if (j && S.live.drafted) setSetupPage(j); });
       R = S.live.busy ? next('Drafting…', ()=>{}, {dis:true}) : next(S.live.drafted?'Redraft':'Draft it', draftSetup, {dis:!SAMPLE});
       if (S.live.drafted && !S.live.busy) R = h('div',{class:'btnrow'},h('button',{class:'btn',onclick:draftSetup},'Redraft'),next('Review', ()=>setSetupPage(1)));
+    } else if (sp===1){
+      L = back('Describe', ()=>setSetupPage(0)); C = dots(['Describe','Review','Table'], 1, j=>setSetupPage(j));
+      R = next('Check the table', ()=>setSetupPage(2), {short:'Next'});
     } else {
-      L = back('Describe', ()=>setSetupPage(0)); C = dots(['Describe','Review'], 1, j=>{ if (!j) setSetupPage(0); });
-      R = next(S.runMode==='quick'?'Run the quick brief':'Confirm and start', start, {short:'Start'});
+      L = back('Review', ()=>setSetupPage(1)); C = dots(['Describe','Review','Table'], 2, j=>setSetupPage(j));
+      R = next(S.runMode==='quick'?'Looks right, run the brief':'Looks right, start', start, {short:'Start', dis: inSeats().length<3});
     }
   } else if (k==='debate'){
     L = back('Set up', ()=>go('setup')); C = h('span',{class:'where'},STAGES.find(x=>x[0]===S.stage)[1]);
