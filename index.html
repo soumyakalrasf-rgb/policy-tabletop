@@ -208,6 +208,8 @@ table.grid .num{font-family:var(--mono)}
 .es-block{display:grid;gap:10px;align-content:start}
 .es-block ul,.es-block ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:.92rem}
 .es-block p{font-size:.92rem}
+.es-lede{font-size:1.02rem;line-height:1.65;max-width:70ch;margin:-12px 0 28px;color:var(--ink)}
+.es-block.span-all{grid-column:1/-1;max-width:640px}
 .outlook{display:grid;gap:0}
 .orow{display:grid;grid-template-columns:minmax(0,1.6fr) auto auto;gap:4px 12px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:.88rem}
 .orow:first-child{border-top:0}
@@ -564,9 +566,14 @@ function demoScript(){
   E.push({k:'stage',to:'outputs'});
   E.push({k:'outputs',
     summary:{
-      headline:'In this simulation, most perspectives could accept a tiered impact assessment, but only with seven conditions attached. None of these views came from real stakeholders.',
+      headline:'In this simulation, the room leaned toward a tiered review of AI tools, but only with strings attached. None of these views came from real stakeholders.',
       conditions:['Review finishes in weeks, not quarters (Resident Services)','A funded reviewer and testing budget (Budget office)','The review rules are published in advance (Vendor)','Someone outside the department checks each rating (State partner, Red Team)','Every conversation is recorded, at every level (Records)','Staff are consulted and any change to duties is bargained (Labor)','Tools are tested in the languages residents use (absent voice)'],
-      dissent:'The labor perspective leans toward a pause until staff are consulted. The IT and vendor perspectives would rather add AI checks to procurement than create a new review. The Red Team opposes a registry on its own.'
+      dissent:'The labor perspective leans toward a pause until staff are consulted. The IT and vendor perspectives would rather add AI checks to procurement than create a new review. The Red Team opposes a registry on its own.',
+      discussion:'The room split between speed and safeguards. Everyone accepted that AI answers to residents need some review; the fight was over how heavy that review should be and who pays for it. The turning point came when staff reported colleagues already pasting resident emails into free AI tools. That made doing nothing the risky choice rather than the cautious one.',
+      agreed:['Some review is needed before AI answers residents directly.','Any question about whether someone qualifies for a service should go to a person.','Every AI conversation with a resident should be recorded.'],
+      disputed:['How heavy the review should be: a new tiered review, or AI questions added to existing purchasing checks.','Whether a pause helps, or just pushes AI use out of sight.','Who pays for reviewers and testing. No one has budgeted for it.','Whether staff and their union must be consulted before any launch.'],
+      changed:['News that staff already use free AI tools made doing nothing look riskier to almost every seat.','Resident Services agreed to send “do I qualify” questions to staff after pushback.','IT accepted that nobody checks AI tools after launch today.'],
+      overlooked:['Accuracy in languages other than English: raised by the absent voice, owned by no one.','Whether chatbot conversations are public records that must be kept.']
     },
     analysis: DEMO.analysis,
     matrix:{uk:['Which departments already use consumer AI tools informally?']},
@@ -940,11 +947,11 @@ async function liveRun(from){
       S.live.phase='out';
       busy('Writing outputs…');
       const seats = inSeats();
-      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the perspectives landed","analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nInclude every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default');
+      const r = await askJSON(`You are the neutral moderator of Policy Tabletop. The session is over. Summarize where it landed.\n\n${sessionBrief()}\n\nSeats:\n${seats.map(s=>`${s.id} ${s.role} (${GROUPS[s.group].label})`).join('\n')}\n\nTranscript:\n${transcriptText(20000)}\n\nReturn only JSON: {"landing":{${S.options.map(o=>`"${o.id}":{"s1":"support|conditional|oppose"}`).join(',')}},"conditions":{"o1":"one sentence on the main conditions seats attached"},"questions":["4 to 6 questions to put to real experts"],"consult":[{"role":"a role to consult (never a named person)","why":"one line"}],"headline":"one plain sentence that starts 'In this simulation,' and says where the discussion ended up","discussion":"3 or 4 plain sentences summarizing the discussion for an executive: the main tension, the turning point, and where it ended","agreed":["up to 3 points most seats agreed on, under 20 words each"],"disputed":["up to 4 points still in dispute, under 25 words each"],"changed":["up to 3 moments that changed minds, under 25 words each"],"overlooked":["up to 2 things the room nearly missed, under 20 words each"],"analysis":{${S.options.map(o=>`"${o.id}":{"cost":"","legal":"","timeline":"","capacity":"","exposure":"","worst":""}`).join(',')}},"lead_conditions":["short conditions attached to the most-supported option"],"dissent":"one or two sentences on the main dissent","known_unknowns":[{"item":"...","where":"...","next":"..."}],"unknown_knowns":[{"item":"...","who":"...","next":"..."}]}\nFor every \"where\", name only real public sources, offices or datasets you are confident exist, or internal roles; never invent URLs or document titles.\nInclude every seat id (${seats.map(s=>s.id).join(', ')}) under every option. Base stances only on what the seats said. In "analysis", write one short qualitative line per option for cost, legal authority, timeline, implementation capacity, political exposure and worst case. Never invent figures, dollar amounts, statutes or dates; write "not yet estimated" when unknown.\n\n${GUARD}`,'default');
       const landing = {};
       for (const o of S.options){ landing[o.id]={}; for (const s of seats){ const v=r.landing?.[o.id]?.[s.id]; landing[o.id][s.id] = ['support','conditional','oppose'].includes(v)?v:null; } }
       enqueue({k:'stage',to:'outputs'});
-      enqueue({k:'outputs',landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis:(r.analysis&&typeof r.analysis==='object')?r.analysis:{},summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):''}});
+      enqueue({k:'outputs',landing,conditions:r.conditions||{},questions:(r.questions||[]).map(String),consult:(r.consult||[]).map(c=>({role:String(c.role||''),why:String(c.why||'')})),matrix:{ku:r.known_unknowns||[],uk:r.unknown_knowns||[]},analysis:(r.analysis&&typeof r.analysis==='object')?r.analysis:{},summary:{headline:r.headline?String(r.headline):'',conditions:arr(r.lead_conditions),dissent:r.dissent?String(r.dissent):'',discussion:r.discussion?String(r.discussion):'',agreed:arr(r.agreed),disputed:arr(r.disputed),changed:arr(r.changed||r.changed_minds),overlooked:arr(r.overlooked)}});
       enqueue({k:'turn',seat:'mod',type:'moderator',text:'Outputs are ready below. This record informs a decision; it does not make one.',source:null});
       S.live.phase='done';
     }
@@ -1099,15 +1106,14 @@ function buildRecord(){
   L.push(`- **Session date:** ${today}`);
   L.push(`- **Review date:** ${S.reviewDate}`);
   L.push(`- **Mode:** ${S.mode==='demo'?'Scripted demo (example content, fictional internal records)':'Live session'}`,'');
-  const sd = Object.keys(S.landing).length ? summaryData() : null;
+  const sd = (S.summary || Object.keys(S.landing).length) ? summaryData() : null;
   L.push('## Executive summary','');
   if (sd){
     L.push(sd.headline,'');
-    L.push(`**What ${sd.lead.label} would need:**`); sd.conditions.forEach(c=>L.push(`- ${c}`)); L.push('');
-    L.push(`**Main dissent:** ${sd.dissent}`,'');
-    if (sd.risks.length){ L.push('**Risks to watch:**'); sd.risks.forEach(r=>L.push(`- ${r.text}`)); L.push(''); }
-    if (sd.worst) L.push(`**Worst case if ${sd.lead.label} is chosen:** ${sd.worst}`,'');
-    L.push('**Before anyone decides:**'); sd.steps.forEach((x,i)=>L.push(`${i+1}. ${x.text}${x.where?` (${x.where})`:''}${x.owner?` Owner: ${x.owner}.`:''}${x.due?` Due ${x.due}.`:''}`)); L.push('');
+    if (sd.discussion) L.push(sd.discussion,'');
+    const sec2 = (t,a) => { if (a.length){ L.push(`**${t}:**`); a.forEach(x=>L.push(`- ${x}`)); L.push(''); } };
+    sec2('Where they agreed', sd.agreed); sec2('Where they disagreed', sd.disputed); sec2('What changed minds', sd.changed); sec2('What the room almost missed', sd.overlooked);
+    if (sd.risks.length){ L.push(`**Risk outlook, next ${S.horizon} months:**`); sd.risks.forEach(r=>L.push(`- ${r.text}`)); L.push(''); }
   } else L.push('Session not finished.','');
   L.push('## Options compared','');
   for (const o of S.options){ const t=tally(o.id); L.push(`- **${o.label}**: ${o.desc}${Object.keys(S.landing).length?` Support ${t.support}, with conditions ${t.conditional}, oppose ${t.oppose}.`:''}${S.conditions[o.id]?` Conditions: ${S.conditions[o.id]}`:''}`); }
@@ -1538,15 +1544,17 @@ function riskWatch(){
   return riskDirection().map(d=>({text:`${d.r.short}: ${d.level}, ${d.trend} ${TREND_ARROW[d.trend]}, ${d.agree}.`, d}));
 }
 function summaryData(){
-  const lead = leadingOption(); if (!lead) return null;
-  const t = tally(lead.id);
+  const lead = leadingOption();
   const sm = S.summary || {};
-  const headline = sm.headline || `In this simulation, most perspectives could accept ${lead.label.toLowerCase()}, with conditions. None of these views came from real stakeholders.`;
-  const conditions = (sm.conditions && sm.conditions.length) ? sm.conditions : (S.conditions[lead.id] ? [S.conditions[lead.id]] : []);
-  let dissent = sm.dissent;
-  if (!dissent){ const opp=inSeats().filter(s=>S.landing[lead.id]?.[s.id]==='oppose'); dissent = opp.length ? `The ${opp.map(s=>s.role).join(', ')} oppose ${lead.label.toLowerCase()}.` : `No simulated perspective opposes ${lead.label.toLowerCase()} outright.`; }
+  const turnsBy = t => S.turns.filter(x=>x.type===t);
+  const headline = sm.headline || (lead ? `In this simulation, the discussion leaned toward ${lc(lead.label)}, with conditions.` : 'In this simulation, the seats did not settle on one option.') + ' None of these views came from real stakeholders.';
+  const discussion = sm.discussion || S.camps || '';
+  const agreed = (sm.agreed&&sm.agreed.length) ? sm.agreed : S.matrix.kk.slice(0,3).map(x=>x.text);
+  const disputed = (sm.disputed&&sm.disputed.length) ? sm.disputed : turnsBy('challenge').filter(t=>t.disputes).slice(0,4).map(t=>`${speakerInfo(t.seat).name} disputed: “${t.disputes}”`);
+  const changed = (sm.changed&&sm.changed.length) ? sm.changed : turnsBy('concession').slice(0,3).map(t=>`${speakerInfo(t.seat).name}: ${t.text}`);
+  const overlooked = (sm.overlooked&&sm.overlooked.length) ? sm.overlooked : [...S.matrix.uk, ...S.matrix.ku].slice(0,2).map(x=>x.text);
   const steps = followupList().slice(0,5);
-  return {lead, t, headline, conditions, dissent, risks:riskWatch(), steps, worst:S.analysis?.[lead.id]?.worst||''};
+  return {lead, headline, discussion, agreed, disputed, changed, overlooked, risks:riskWatch(), steps, worst:lead?S.analysis?.[lead.id]?.worst||'':'', dissent:sm.dissent||''};
 }
 /* follow-up tracker: next steps with an owner, a due date and what real people said */
 function followupList(){
@@ -1570,7 +1578,7 @@ function showFinished(){
 function renderSummary(){
   const p = $('#summaryPanel');
   const head = h('div',{class:'es-head'},h('span',{class:'label'},'Executive summary'),h('span',{class:'stamp'},'Simulated · informs, does not decide'));
-  const d = Object.keys(S.landing).length ? summaryData() : null;
+  const d = (S.summary || Object.keys(S.landing).length) ? summaryData() : null;
   if (!d){
     p.hidden = !S.started;
     if (!S.started) return;
@@ -1581,31 +1589,23 @@ function renderSummary(){
     return;
   }
   p.hidden = false;
-  const n = inSeats().length || 1;
   const warn = consensusWarnings();
-  const bars = h('div',{style:'display:grid;gap:12px'},
-    ...S.options.map(o=>{ const t=tally(o.id); return h('div',{class:'obar'},
-      h('div',{class:'top'},h('span',{},o.id===d.lead.id?h('b',{},o.label):o.label),h('span',{class:'num'},`${t.support} yes · ${t.conditional} with conditions · ${t.oppose} no`)),
-      h('div',{class:'bar',role:'img','aria-label':`${o.label}: ${t.support} support, ${t.conditional} with conditions, ${t.oppose} oppose (simulated)`},
-        h('span',{class:'s',style:`width:${t.support/n*100}%`}),h('span',{class:'c',style:`width:${t.conditional/n*100}%`}),h('span',{class:'o',style:`width:${t.oppose/n*100}%`}))); }),
-    h('div',{class:'keyline'},h('span',{},h('i',{style:'background:var(--ink)'}),'Support'),h('span',{},h('i',{style:'background:var(--ink-3)'}),'With conditions'),h('span',{},h('i',{style:'background:var(--signal)'}),'Oppose'))
-  );
+  const block = (label, kids) => h('div',{class:'es-block'},h('div',{class:'label'},label),...[].concat(kids));
+  const list = (items, empty) => items.length ? h('ul',{},...items.map(x=>h('li',{},x))) : h('p',{class:'muted'},empty);
   p.replaceChildren(...[head,
     h('h2',{class:'es-headline'},d.headline),
+    d.discussion ? h('p',{class:'es-lede'},d.discussion) : null,
     warn.length ? h('div',{class:'alert',role:'note'},h('b',{},'Be careful. '),warn.join(' '),' Simulated seats agree more than real people usually do. Check this with the people involved before relying on it.') : null,
     h('div',{class:'es-grid'},
-      h('div',{class:'es-block'},h('div',{class:'label'},'Before anyone decides'),
-        d.steps.length?h('ol',{},...d.steps.map(x=>h('li',{},x.text,h('span',{class:'where'},[x.where, x.owner?`Owner: ${x.owner}`:'', x.due?`Due ${x.due}`:''].filter(Boolean).join(' · '))))):h('p',{class:'muted'},'See the full detail for open questions.')),
-      h('div',{class:'es-block'},h('div',{class:'label'},`What ${d.lead.label.toLowerCase()} would need`),
-        d.conditions.length?h('ul',{},...d.conditions.map(c=>h('li',{},c))):h('p',{class:'muted'},'No conditions recorded.')),
-      h('div',{class:'es-block'},h('div',{class:'label'},'Main dissent'),h('p',{},d.dissent),
-        d.worst?h('div',{class:'label',style:'margin-top:8px'},'Worst case if chosen'):null, d.worst?h('p',{},d.worst):null),
-      h('div',{class:'es-block'},h('div',{class:'label'},`Where ${n} simulated perspectives landed`),bars,
-        d.risks.length?h('div',{class:'label',style:'margin-top:14px'},`Risk outlook, next ${S.horizon} months`):null,
-        d.risks.length?h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},x.d.level),h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`),h('span',{class:'oagree'},x.d.agree)))):null)
+      block('Where they agreed', list(d.agreed,'No clear agreement.')),
+      block('Where they disagreed', list(d.disputed,'No open disagreements.')),
+      block('What changed minds', list(d.changed,'No one changed position.')),
+      block('What the room almost missed', list(d.overlooked,'Nothing flagged.')),
+      d.risks.length ? h('div',{class:'es-block span-all'},h('div',{class:'label'},`Risk outlook, next ${S.horizon} months`),
+        h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},x.d.level),h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`),h('span',{class:'oagree'},x.d.agree))))) : null
     ),
     h('div',{class:'es-foot'},
-      h('span',{class:'small muted'},`${S.verify.length} claims to check · review on ${S.reviewDate}`),
+      h('span',{class:'small muted'},`Review on ${S.reviewDate}`),
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
         h('button',{class:'btn primary',onclick:()=>setView('detail')},'Full detail →')))
@@ -1662,7 +1662,7 @@ function renderRecord(){
   );
 }
 function buildMemo(){
-  const d = Object.keys(S.landing).length ? summaryData() : null;
+  const d = (S.summary || Object.keys(S.landing).length) ? summaryData() : null;
   const day = new Date().toISOString().slice(0,10);
   const L = [];
   L.push('# Decision memo (staff draft)','');
@@ -1675,18 +1675,16 @@ function buildMemo(){
   L.push(`| | ${S.options.map(o=>o.label).join(' | ')} |`, `|---|${S.options.map(()=>'---').join('|')}|`);
   L.push(`| What it is | ${S.options.map(o=>o.desc).join(' | ')} |`);
   if (has) for (const [k,l] of ANALYSIS_ROWS) L.push(`| ${l} | ${S.options.map(o=>S.analysis?.[o.id]?.[k]||'').join(' | ')} |`);
-  if (Object.keys(S.landing).length) L.push(`| Simulated support (support · conditions · oppose) | ${S.options.map(o=>{const t=tally(o.id);return `${t.support} · ${t.conditional} · ${t.oppose}`;}).join(' | ')} |`);
   L.push('','Cost, legal and timeline lines are a simulated first pass and must be verified by the owning offices.','');
   if (d){
-    L.push('## What the simulation surfaced','',d.headline,'');
-    L.push(`**Conditions for ${d.lead.label}:**`); d.conditions.forEach(c=>L.push(`- ${c}`)); L.push('');
-    L.push(`**Main dissent:** ${d.dissent}`,'');
-    const warn = consensusWarnings(); if (warn.length) L.push(`**Caution:** ${warn.join(' ')} Simulated seats tend to agree; test with real people.`,'');
-    L.push('## Before deciding','');
-    d.steps.forEach((f,i)=>L.push(`${i+1}. ${f.text}${f.where?` (${f.where})`:''}`));
-    L.push('');
+    L.push('## What the discussion found','',d.headline,'');
+    if (d.discussion) L.push(d.discussion,'');
+    const sec2 = (t,a) => { if (a.length){ L.push(`**${t}:**`); a.forEach(x=>L.push(`- ${x}`)); L.push(''); } };
+    sec2('Where they agreed', d.agreed); sec2('Where they disagreed', d.disputed); sec2('What changed minds', d.changed); sec2('What the room almost missed', d.overlooked);
+    if (d.risks.length){ L.push(`**Risk outlook, next ${S.horizon} months:**`); d.risks.forEach(r=>L.push(`- ${r.text}`)); L.push(''); }
+    const warn = consensusWarnings(); if (warn.length) L.push(`**Caution:** ${warn.join(' ')} Simulated seats tend to agree more than real people; test with the people involved.`,'');
   }
-  L.push('## Recommendation','','None yet. Staff will recommend once the steps above are complete and real stakeholders have been consulted.','');
+  L.push('## Recommendation','','None yet. Staff will recommend after consulting the real people involved.','');
   L.push(`Review date for this decision: ${S.reviewDate}.`);
   return L.join('\n');
 }
