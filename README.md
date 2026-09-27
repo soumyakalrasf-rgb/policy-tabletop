@@ -30,7 +30,7 @@ This repository deploys as-is to Vercel's free Hobby plan (personal, non-commerc
 
 ## Before staff use it with real matters
 
-- **Data:** live sessions send the question, background notes and transcript to Anthropic's API. Confirm this fits your data rules.
+- **Data:** live sessions send the question, background notes and transcript to the model provider you choose (OpenRouter and its model hosts, or Anthropic). Confirm this fits your data rules.
 - **Records:** ask counsel how transcripts, decision records and saved sessions are treated.
 - **Consent:** get consent before recording anyone's voice. On hosted copies, the microphone button uses the browser's speech service; in Chrome, that sends audio to Google.
 
