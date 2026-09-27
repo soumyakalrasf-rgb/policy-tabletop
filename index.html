@@ -374,7 +374,7 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
 <script>
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-var UI = {view:'summary', open:{}, keyOnly:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false};
+var UI = {view:'summary', open:{}, keyOnly:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs||{})){
@@ -634,7 +634,7 @@ let SAMPLE = undefined, DL = undefined; // undefined = checking, null = unavaila
 const ERR = {
   not_granted:'Claude access was not allowed for this page. Live features are off for this visit.',
   sampling_disabled:'Claude is not available for this account.',
-  rate_limited:'Too many requests right now. Wait a minute, then retry.',
+  rate_limited:'Too many requests right now. Free models allow about 20 requests a minute and a daily cap. Wait a minute, then retry.',
   session_expired:'Your Claude session expired. Sign in again, then retry.',
   refused:'Claude declined this request. Rephrase the question or context and retry.',
   invalid_json:'The reply could not be read as structured data. Retry this step.',
@@ -1189,8 +1189,8 @@ function intakeBlock(){
 function liveStatusBlock(){
   if (SAMPLE===undefined) return h('p',{class:'small muted'},'Checking for a live connection…');
   if (SAMPLE){
-    if (UI.keyMode) return h('p',{class:'small muted'},'Connected with your API key. It stays in this browser and goes only to Anthropic. ',h('button',{class:'linkbtn',onclick:disconnectKey},'Disconnect'));
-    return h('p',{class:'small muted'}, HOSTED ? `Live is ready. It runs on this site’s shared key${UI.economy?' in economy mode':''}, so please keep sessions to what you need.` : 'Live is ready. It runs on your Claude account, and Claude asks once for permission. A full session is about 25 to 30 requests.');
+    if (UI.keyMode) return h('p',{class:'small muted'},`Connected with your ${UI.keyProvider==='openrouter'?'OpenRouter':'Anthropic'} key. It stays in this browser. `,h('button',{class:'linkbtn',onclick:disconnectKey},'Disconnect'));
+    return h('p',{class:'small muted'}, HOSTED ? `Live is ready. It runs on ${UI.modelLabel||'this site’s shared key'}. Please keep sessions to what you need.` : 'Live is ready. It runs on your Claude account, and Claude asks once for permission. A full session is about 25 to 30 requests.');
   }
   if (HOSTED && UI.server && UI.needPass) return h('div',{class:'keybox'},
     h('div',{class:'label'},'Unlock live sessions'),
@@ -1199,10 +1199,11 @@ function liveStatusBlock(){
   if (!HOSTED) return h('div',{class:'note warn'},h('b',{},'Live generation isn’t available in this view. '),'Claude didn’t give this page access. Open the artifact from claude.ai in a web browser while signed in, not a downloaded or GitHub copy. If your organization limits what artifacts can do, ask your admin. The example session still works.');
   return h('div',{class:'keybox'},
     h('div',{class:'label'},'Connect live generation'),
-    h('p',{class:'small muted'},'This copy has no server behind it. Paste an Anthropic API key to run live sessions from this browser. For shared use, deploy with the server package instead.'),
-    h('div',{style:'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px'},h('input',{type:'password',id:'apiKey','aria-label':'Anthropic API key',placeholder:'sk-ant-…',autocomplete:'off'}),h('button',{class:'btn primary',onclick:connectKey},'Connect')),
+    h('p',{class:'small muted'},'This copy has no server behind it. Paste an API key to run live sessions from this browser. OpenRouter offers free open models; Anthropic runs Claude.'),
+    h('select',{id:'keyProv','aria-label':'Provider',onchange:e=>{UI.keyProvider=e.target.value;}},h('option',{value:'openrouter',selected:UI.keyProvider==='openrouter'},'OpenRouter (free open models)'),h('option',{value:'anthropic',selected:UI.keyProvider==='anthropic'},'Anthropic (Claude)')),
+    h('div',{style:'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px'},h('input',{type:'password',id:'apiKey','aria-label':'API key',placeholder:'sk-or-… or sk-ant-…',autocomplete:'off'}),h('button',{class:'btn primary',onclick:connectKey},'Connect')),
     h('label',{class:'small',style:'display:flex;gap:6px;align-items:center'},h('input',{type:'checkbox',id:'rememberKey'}),'Remember until this tab closes'),
-    h('p',{class:'small muted'},'The key is sent only to api.anthropic.com. Anyone using this browser could use it while connected, so set a spend limit in the Anthropic Console.'));
+    h('p',{class:'small muted'},'The key is sent only to the provider you pick. Anyone using this browser could use it while connected, so set a spend limit. Free OpenRouter models are rate-limited and may log prompts; never paste sensitive material.'));
 }
 function readyBlock(){
   const hasAbsent = S.seats.some(s=>s.included&&s.group==='absent'), hasRed = S.seats.some(s=>s.included&&s.group==='redteam');
@@ -1716,7 +1717,9 @@ function parseLoose(t){
   throw {code:'invalid_json', text:t};
 }
 const MODELS = {quick:'claude-haiku-4-5-20251001', default:'claude-sonnet-5', complex:'claude-opus-5-5'};
+const OR_BROWSER_MODEL = 'qwen/qwen3.8-27b:free';
 async function directJson(input, opts={}){
+  if (UI.keyProvider==='openrouter') return directOpenRouter(input);
   let res;
   try{ res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':UI.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
     body:JSON.stringify({model:MODELS[opts.modelTier]||MODELS.default,max_tokens:4000,system:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.',messages:[{role:'user',content:String(input)}]})}); }
@@ -1727,11 +1730,23 @@ async function directJson(input, opts={}){
   const data = await res.json();
   return parseLoose((data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(''));
 }
+async function directOpenRouter(input){
+  let res;
+  try{ res = await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${UI.apiKey}`,'X-Title':'Policy Tabletop'},
+    body:JSON.stringify({model:OR_BROWSER_MODEL,max_tokens:4000,messages:[{role:'system',content:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.'},{role:'user',content:String(input)}]})}); }
+  catch{ throw {code:'upstream_error'}; }
+  if (res.status===401 || res.status===403) throw {code:'bad_key'};
+  if (res.status===429) throw {code:'rate_limited'};
+  if (!res.ok) throw {code:'upstream_error'};
+  const data = await res.json();
+  return parseLoose(String(data.choices?.[0]?.message?.content||''));
+}
 function connectKey(){
   const k = ($('#apiKey')?.value||'').trim();
-  if (!k.startsWith('sk-')){ toast('That does not look like an Anthropic API key.'); return; }
+  UI.keyProvider = $('#keyProv')?.value || UI.keyProvider;
+  if (!k.startsWith('sk-')){ toast('That does not look like an API key.'); return; }
   UI.apiKey = k; UI.keyMode = true; SAMPLE = {json: directJson};
-  if ($('#rememberKey')?.checked){ try{ sessionStorage.setItem('pt_key', k); }catch{} }
+  if ($('#rememberKey')?.checked){ try{ sessionStorage.setItem('pt_key', k); sessionStorage.setItem('pt_prov', UI.keyProvider); }catch{} }
   renderAll(); toast('Connected');
 }
 async function unlockPass(){
@@ -1768,10 +1783,10 @@ function toggleMic(btn){
       try{
         const r = await fetch(window.TABLETOP_API);
         const j = r.ok ? await r.json().catch(()=>({})) : {};
-        if (j.ok){ UI.server=true; UI.economy=!!j.economy; UI.needPass=!!j.passcode; if (!UI.needPass) SAMPLE = {json: apiJson}; }
+        if (j.ok){ UI.server=true; UI.economy=!!j.economy; UI.modelLabel=j.model||''; UI.needPass=!!j.passcode; if (!UI.needPass) SAMPLE = {json: apiJson}; }
       }catch{}
     }
-    if (!SAMPLE && !UI.server){ let k=''; try{ k = sessionStorage.getItem('pt_key')||''; }catch{} if (k){ UI.apiKey=k; UI.keyMode=true; SAMPLE={json:directJson}; } }
+    if (!SAMPLE && !UI.server){ let k=''; try{ k = sessionStorage.getItem('pt_key')||''; }catch{} if (k){ UI.apiKey=k; UI.keyMode=true; try{ UI.keyProvider=sessionStorage.getItem('pt_prov')||'anthropic'; }catch{} SAMPLE={json:directJson}; } }
     renderAll(); return;
   }
   const [a,b] = await Promise.all([window.claude.use('sample').catch(()=>null), window.claude.use('downloads').catch(()=>null)]);
