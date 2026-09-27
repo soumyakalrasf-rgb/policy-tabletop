@@ -360,7 +360,6 @@ footer.guard ul{margin:0;padding-left:18px;display:grid;gap:4px}
     <section class="outs" id="outs">
       <div class="panel span2" id="analysisPanel"></div>
       <div class="panel span2" id="matrixPanel"></div>
-      <div class="panel span2" id="followPanel"></div>
       <div class="panel span2" id="landingPanel"></div>
       <div class="panel" id="expertPanel"></div>
       <div class="panel" id="consultPanel"></div>
@@ -815,6 +814,28 @@ async function askJSON(prompt, tier='default'){
   return await SAMPLE.json(prompt, {modelTier:tier});
 }
 
+const pick = (o,keys) => { for (const k of keys) if (o && o[k]!=null && o[k]!=='') return o[k]; return undefined; };
+const asList = v => Array.isArray(v) ? v : (v && typeof v==='object' ? Object.values(v) : []);
+function normGroup(g){ const x=String(g||'').toLowerCase(); return x.includes('red') ? 'redteam' : x.includes('absent') ? 'absent' : x.includes('ext') ? 'external' : 'internal'; }
+function applySetupParts(r, onlyMissing){
+  const opts = asList(pick(r,['options','response_options','choices'])).map((o,i)=>typeof o==='string'?{label:o,desc:''}:o).slice(0,4)
+    .map((o,i)=>({id:'o'+(i+1), label:String(pick(o,['label','name','title','option'])||`Option ${i+1}`), desc:String(pick(o,['desc','description','summary','detail'])||'')}));
+  const risks = asList(pick(r,['risks','risk_events','risk_list'])).map(x=>typeof x==='string'?{short:x.split(/[.:]/)[0].slice(0,40),text:x}:x).slice(0,5)
+    .map((x,i)=>({id:'R'+(i+1), short:String(pick(x,['short','name','title','label'])||`Risk ${i+1}`), text:String(pick(x,['text','description','event','detail'])||pick(x,['short','name'])||'')}));
+  const seats = asList(pick(r,['seats','perspectives','stakeholders','participants','roles'])).slice(0,12)
+    .map((x,i)=>{ const role=String(pick(x,['role','name','title','perspective_name'])||`Seat ${i+1}`); const group=normGroup(pick(x,['group','type','category'])||(/red team/i.test(role)?'redteam':'')); const src=asList(pick(x,['sources','grounding_sources','references'])).map(v=>typeof v==='string'?v:String(pick(v,['title','name'])||'')).filter(Boolean).slice(0,3);
+      return {id:'s'+(i+1), role, group, perspective:String(pick(x,['perspective','description','view','stance'])||''), sources:src, included:true, abbr: group==='redteam'?'RED':group==='absent'?'ABS':abbr(role)}; });
+  if (!onlyMissing || S.options.length<2) { if (opts.length) S.options = opts; }
+  if (!onlyMissing || S.risks.length<3) { if (risks.length) S.risks = risks; }
+  if (!onlyMissing || S.seats.length<6) { if (seats.length) S.seats = seats; }
+  S.shift = S.risks.map(()=>0);
+}
+function ensureKeySeats(){
+  const ctxSource = S.context ? 'Staff notes for this session (internal record)' : 'Public reporting on similar decisions elsewhere';
+  if (!S.seats.some(x=>x.group==='absent')) S.seats.push({id:'sa'+S.seats.length, role:'People most affected (absent voice)', group:'absent', perspective:'Speaks for the people this decision affects most, who are least likely to be heard.', sources:[ctxSource], included:true, abbr:'ABS'});
+  if (!S.seats.some(x=>x.group==='redteam')) S.seats.push({id:'sr'+S.seats.length, role:'Red Team', group:'redteam', perspective:'Argues how each option could fail.', sources:[ctxSource], included:true, abbr:'RED'});
+  S.seats.forEach((x,i)=>{ x.id = 's'+(i+1); });
+}
 async function draftSetup(){
   const q = $('#liveQ').value.trim(); if (!q){ toast('Enter the policy question first.'); return; }
   S.rawQuestion = q; S.context = $('#liveCtx').value; S.decisionType = $('#liveType').value; S.horizon = Number($('#liveHorizon').value)||12;
@@ -836,12 +857,19 @@ Return only JSON of this shape:
 Requirements: 3 or 4 options, including a minimal or "do nothing more" option. 8 to 12 seats, each named as a perspective (for example "Labor perspective", never the name of a real organization or person): internal perspectives (e.g. IT, security, legal, affected departments, and the budget office); external perspectives (industry, civil society, partners, other levels of government, and labor or staff unions when jobs are affected); an elected-official or political-exposure perspective when the decision is publicly visible; exactly one seat with group "absent" for the people most affected but least represented; exactly one seat with group "redteam" named "Red Team" whose job is to argue how each option fails. Exactly 5 risks. Sources must be real public documents you are confident exist (laws, standards, official guidance) or internal records named generically and marked "(internal record)", using the staff context where possible. Seats are roles, never real named people. Invent no statistics. If the topic is politically contested, spread seats across the range of views.`;
   try{
     const r = await askJSON(prompt,'default');
-    S.question = String(r.sharpened||q); S.questionConfirmed = false;
-    S.options = (r.options||[]).slice(0,4).map((o,i)=>({id:'o'+(i+1), label:String(o.label||`Option ${i+1}`), desc:String(o.desc||'')}));
-    S.risks = (r.risks||[]).slice(0,5).map((x,i)=>({id:'R'+(i+1), short:String(x.short||`Risk ${i+1}`), text:String(x.text||'')}));
-    S.seats = (r.seats||[]).slice(0,12).map((x,i)=>({id:'s'+(i+1), role:String(x.role||`Seat ${i+1}`), group:GROUPS[x.group]?x.group:'internal', perspective:String(x.perspective||''), sources:(x.sources||[]).map(String).slice(0,3), included:true, abbr:''}));
-    S.seats.forEach(s=>{ s.abbr = s.group==='redteam' ? 'RED' : s.group==='absent' ? 'ABS' : abbr(s.role); });
-    S.shift = S.risks.map(()=>0);
+    S.question = String(pick(r,['sharpened','question','decision_question'])||q); S.questionConfirmed = false;
+    applySetupParts(r);
+    // If the model skipped or shortened any part, ask once more for just the missing pieces.
+    const need = [];
+    if (S.options.length<2) need.push('"options": 3 or 4 options, including a "do nothing more" option, each {"label","desc"}');
+    if (S.seats.length<6) need.push('"seats": 8 to 10 perspective seats, each {"role","group":"internal|external|absent|redteam","perspective","sources":[2 real sources]}, including one "absent" seat and one "redteam" seat named "Red Team"');
+    if (S.risks.length<3) need.push('"risks": exactly 5 risks, each {"short":"≤4 words","text":"one event that either happens or not within the horizon"}');
+    if (need.length){
+      busy('Filling in the rest of the setup…'); renderSetup();
+      try{ const r2 = await askJSON(`You are setting up a Policy Tabletop session.\nDecision question: ${S.question}\nTime horizon: ${S.horizon} months.\nOptions so far: ${S.options.map(o=>o.label).join('; ')||'none'}\n\nReturn only JSON with these keys:\n${need.join('\n')}\nSeats are roles, never real named people. Sources must be real documents you are confident exist, or internal records marked "(internal record)". Plain language.`,'default');
+      applySetupParts(r2, true); }catch(e){ toast('Part of the setup could not be drafted. Add the missing items under “Review or edit”.'); }
+    }
+    ensureKeySeats();
     S.live.drafted = true; S.live.busy = null;
   }catch(e){ S.live.busy=null; toast(errCopy(e)); }
   renderAll();
@@ -1104,10 +1132,6 @@ function buildRecord(){
     L.push(`| | ${S.options.map(o=>o.label).join(' | ')} |`, `|---|${S.options.map(()=>'---').join('|')}|`);
     for (const [k,l] of ANALYSIS_ROWS) L.push(`| ${l} | ${S.options.map(o=>S.analysis?.[o.id]?.[k]||'').join(' | ')} |`);
   }
-  if (S.followups.length){
-    L.push('','## Follow-up tracker','');
-    S.followups.forEach((f,i)=>L.push(`${i+1}. ${f.text} Owner: ${f.owner||'[assign]'}. Due: ${f.due||'[set]'}. Status: ${f.status}.${f.said?` Real response: ${f.said}`:''}${f.match?` Compared with simulation: ${(MATCH.find(m=>m[0]===f.match)||[])[1]}.`:''}`));
-  }
   L.push('','## Next steps','');
   L.push(`1. Work through the verification list before citing any claim from this session.`);
   L.push(`2. Put the questions above to real experts and meet the people listed to consult.`);
@@ -1133,7 +1157,7 @@ async function copyText(text){
 /* ---------- render ---------- */
 function renderAll(){
   renderHeader(); renderSummary(); renderSetup(); renderTable(); renderSeatCard(); renderTranscript(); renderControls();
-  renderLanding(); renderAnalysis(); renderMatrix(); renderFollowups(); renderLists(); renderRecord(); renderSticky();
+  renderLanding(); renderAnalysis(); renderMatrix(); renderLists(); renderRecord(); renderSticky();
 }
 function renderHeader(){
   $('#modeDemo').setAttribute('aria-pressed', S.mode==='demo'); $('#modeLive').setAttribute('aria-pressed', S.mode==='live');
@@ -1530,31 +1554,6 @@ function followupList(){
   for (const x of base){ if (!S.followups.some(f=>f.text===x.next)) S.followups.push({text:x.next, where:x.where||'', owner:'', due:'', status:'open', said:'', match:''}); }
   return S.followups;
 }
-const MATCH = [['','Not yet'],['yes','Matched the simulation'],['partly','Partly matched'],['no','Contradicted it'],['missed','Simulation missed this']];
-function renderFollowups(){
-  const p = $('#followPanel');
-  const list = Object.keys(S.landing).length ? followupList() : [];
-  const done = list.filter(f=>f.said.trim());
-  const count = k => list.filter(f=>f.match===k).length;
-  const head = h('div',{class:'panel-head'},h('h2',{},'Follow-up tracker'),h('span',{class:'small muted'},'Give each step an owner and date. Record what real people said and whether the simulation got it right.'));
-  if (!list.length){ p.replaceChildren(head, h('p',{class:'empty'},'Next steps appear here when the session finishes.')); return; }
-  if (p.contains(document.activeElement) && p.dataset.n===String(list.length)) { const sc=$('#pilotScore'); if (sc) sc.textContent=scoreText(); return; }
-  p.dataset.n = String(list.length);
-  function scoreText(){ const d=list.filter(f=>f.said.trim()).length; return `${d} of ${list.length} answered · matched ${count('yes')} · partly ${count('partly')} · contradicted ${count('no')} · missed by simulation ${count('missed')}`; }
-  p.replaceChildren(head,
-    h('p',{class:'small',id:'pilotScore'},scoreText()),
-    h('div',{class:'fu-list'},...list.map((f,i)=>h('div',{class:'fu'},
-      h('div',{class:'fu-t'},h('span',{class:'mono small muted'},String(i+1).padStart(2,'0')),h('div',{},h('div',{},f.text),f.where?h('div',{class:'where'},f.where):null)),
-      h('div',{class:'fu-f'},
-        h('input',{type:'text',id:`fuo${i}`,'aria-label':'Owner',placeholder:'Owner (role)',value:f.owner,oninput:e=>{f.owner=e.target.value;renderRecord();}}),
-        h('input',{type:'date',id:`fud${i}`,'aria-label':'Due date',value:f.due,oninput:e=>{f.due=e.target.value;renderRecord();}}),
-        h('select',{id:`fus${i}`,'aria-label':'Status',onchange:e=>{f.status=e.target.value;renderRecord();}},...[['open','Open'],['asked','Asked'],['answered','Answered']].map(([v,l])=>h('option',{value:v,selected:f.status===v},l))),
-        h('select',{id:`fum${i}`,'aria-label':'Compared with the simulation',onchange:e=>{f.match=e.target.value;renderFollowups();renderRecord();renderSummary();}},...MATCH.map(([v,l])=>h('option',{value:v,selected:f.match===v},l)))
-      ),
-      h('textarea',{id:`fuw${i}`,rows:1,'aria-label':'What real people said',placeholder:'What real people said',oninput:e=>{f.said=e.target.value; const sc=$('#pilotScore'); if (sc) sc.textContent=scoreText(); renderRecord();}},f.said)
-    )))
-  );
-}
 function setView(v){
   UI.view = v;
   $('#viewSummary').hidden = v!=='summary'; $('#viewDetail').hidden = v!=='detail';
@@ -1584,7 +1583,6 @@ function renderSummary(){
   p.hidden = false;
   const n = inSeats().length || 1;
   const warn = consensusWarnings();
-  const answered = S.followups.filter(f=>f.said.trim()).length;
   const bars = h('div',{style:'display:grid;gap:12px'},
     ...S.options.map(o=>{ const t=tally(o.id); return h('div',{class:'obar'},
       h('div',{class:'top'},h('span',{},o.id===d.lead.id?h('b',{},o.label):o.label),h('span',{class:'num'},`${t.support} yes · ${t.conditional} with conditions · ${t.oppose} no`)),
@@ -1607,7 +1605,7 @@ function renderSummary(){
         d.risks.length?h('div',{class:'outlook'},...d.risks.map(x=>h('div',{class:'orow'},h('span',{class:'oname'},x.d.r.short),h('span',{class:`olevel ${x.d.level}`},x.d.level),h('span',{class:`otrend ${x.d.trend}`,title:`Change during the debate: ${x.d.trend}`},`${TREND_ARROW[x.d.trend]} ${x.d.trend}`),h('span',{class:'oagree'},x.d.agree)))):null)
     ),
     h('div',{class:'es-foot'},
-      h('span',{class:'small muted'},`${answered} of ${S.followups.length} follow-ups answered · ${S.verify.length} claims to verify · review on ${S.reviewDate}`),
+      h('span',{class:'small muted'},`${S.verify.length} claims to check · review on ${S.reviewDate}`),
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
         h('button',{class:'btn primary',onclick:()=>setView('detail')},'Full detail →')))
@@ -1660,7 +1658,7 @@ function renderRecord(){
       h('label',{class:'btn',for:'loadSession2'},'Load a saved session',h('input',{type:'file',id:'loadSession2',accept:'.json,application/json',hidden:true,onchange:loadSession})),
       h('button',{class:'btn',onclick:()=>copyText(buildRecord())},'Copy record')),
     h('pre',{id:'recordPre'},md),
-    h('p',{class:'small muted',style:'margin-top:10px'},'Save the session to keep your follow-up notes. Loading it later restores everything, including estimates for scoring after the review date.')
+    h('p',{class:'small muted',style:'margin-top:10px'},'Save the session to come back to it later. Loading it restores everything.')
   );
 }
 function buildMemo(){
@@ -1685,7 +1683,7 @@ function buildMemo(){
     L.push(`**Main dissent:** ${d.dissent}`,'');
     const warn = consensusWarnings(); if (warn.length) L.push(`**Caution:** ${warn.join(' ')} Simulated seats tend to agree; test with real people.`,'');
     L.push('## Before deciding','');
-    S.followups.forEach((f,i)=>L.push(`${i+1}. ${f.text}${f.owner?` Owner: ${f.owner}.`:' Owner: [assign].'}${f.due?` Due ${f.due}.`:''}${f.said?` Real response: ${f.said}`:''}`));
+    d.steps.forEach((f,i)=>L.push(`${i+1}. ${f.text}${f.where?` (${f.where})`:''}`));
     L.push('');
   }
   L.push('## Recommendation','','None yet. Staff will recommend once the steps above are complete and real stakeholders have been consulted.','');
