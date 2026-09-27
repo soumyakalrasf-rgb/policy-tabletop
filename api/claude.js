@@ -221,7 +221,7 @@ export default async function handler(req, res) {
     // parallel: how many seat turns the page may run at once. Free models get one at a time to avoid rate limits.
     const paidOk = PROVIDER === "openrouter" && configured() ? await hasCredit() : true;
     const freeFirst = PROVIDER === "openrouter" && (isFree(PREFERRED[0]) || !paidOk);
-    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(paidOk), parallel: freeFirst ? 1 : PARALLEL, credit: PROVIDER === "openrouter" ? (credit.known ? credit.paid : "unknown") : undefined });
+    return res.status(200).json({ ok: configured(), passcode: !!PASS, valid: passOk(req), economy: ECONOMY, provider: PROVIDER, model: label(paidOk), parallel: freeFirst ? 1 : PARALLEL, credit: PROVIDER === "openrouter" ? (credit.known ? credit.paid : "unknown") : undefined, version: String(process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || undefined });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   if (!configured()) return res.status(503).json({ error: "Server is missing an API key for the selected provider" });
