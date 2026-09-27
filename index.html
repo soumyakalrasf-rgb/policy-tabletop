@@ -637,12 +637,13 @@ const ERR = {
   rate_limited:'Too many requests right now. Free models allow about 20 requests a minute and a daily cap. Wait a minute, then retry.',
   session_expired:'Your Claude session expired. Sign in again, then retry.',
   refused:'Claude declined this request. Rephrase the question or context and retry.',
-  invalid_json:'The reply could not be read as structured data. Retry this step.',
+  invalid_json:'The model’s reply could not be read. Press Retry; the next attempt may use a different model.',
   prompt_too_large:'The session is too long to send. Shorten the context and retry.',
   cancelled:'Stopped.',
   unavailable:'Live generation is not connected. See the setup panel.',
   bad_key:'Anthropic rejected that API key. Check it and connect again.',
   bad_pass:'The passcode was rejected. Unlock live sessions again.',
+  all_busy:'Every free model was busy or gave an unreadable reply. Press Retry in a minute. Adding an Anthropic key to the site as a last resort stops this from happening.',
   daily_cap:'The free daily limit on OpenRouter is used up (50 requests a day on accounts without credit). It resets at midnight UTC. Adding $10 of OpenRouter credit raises it to 1,000 a day.'
 };
 const errCopy = e => ERR[e?.code] || 'Claude could not finish this step. Retry when ready.';
@@ -1704,23 +1705,23 @@ const CAN_MIC = HOSTED && !!SR && window.isSecureContext;
 const BATCH = () => HOSTED ? 1 : 3; // one request at a time on hosted copies, which often use rate-limited free models
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 async function apiJson(input, opts={}){
-  for (let attempt=0; attempt<3; attempt++){
+  for (let attempt=0; attempt<2; attempt++){
     let res;
-    try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json','x-tabletop-passcode':UI.pass},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default'})}); }
-    catch{ throw {code:'upstream_error'}; }
+    try{ res = await fetch(window.TABLETOP_API,{method:'POST',headers:{'content-type':'application/json','x-tabletop-passcode':UI.pass},body:JSON.stringify({prompt:String(input), tier:opts.modelTier||'default', expect:'json'})}); }
+    catch{ if (attempt<1){ await sleep(4000); continue; } throw {code:'upstream_error'}; }
     if (res.status===401||res.status===403) throw {code:'bad_pass'};
-    if (res.status===429 || res.status===502){
+    if (res.ok){
       const j = await res.json().catch(()=>({}));
-      const detail = String(j.detail||'');
-      if (/per[- ]?day|daily|free-models-per-day/i.test(detail)) throw {code:'daily_cap'};
-      if (attempt<2){ busy(`The free model is busy. Waiting a few seconds, then trying again…`); await sleep(6000*(attempt+1)); continue; }
-      throw {code: res.status===429 ? 'rate_limited' : 'upstream_error', detail};
+      try{ return parseLoose(String(j.text||'')); }catch(e){ if (attempt<1) continue; throw e; }
     }
-    if (!res.ok) throw {code:'upstream_error'};
-    return parseLoose(String((await res.json()).text||''));
+    const j = await res.json().catch(()=>({}));
+    if (j.error==='daily_cap' || /per[- ]?day/i.test(String(j.detail||''))) throw {code:'daily_cap'};
+    if (attempt<1){ busy('All free models were busy. Trying again in a few seconds…'); await sleep(8000); continue; }
+    throw {code:'all_busy', detail:String(j.detail||'')};
   }
 }
 function parseLoose(t){
+  t = String(t||'').replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<\/?think>/gi,'').trim();
   try{ return JSON.parse(t); }catch{}
   const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f){ try{ return JSON.parse(f[1]); }catch{} }
   const a = [t.indexOf('{'),t.indexOf('[')].filter(x=>x>=0); const b = Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));
@@ -1744,7 +1745,7 @@ async function directJson(input, opts={}){
 async function directOpenRouter(input){
   let res;
   try{ res = await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${UI.apiKey}`,'X-Title':'Policy Tabletop'},
-    body:JSON.stringify({models:OR_BROWSER_MODELS,max_tokens:4000,messages:[{role:'system',content:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.'},{role:'user',content:String(input)}]})}); }
+    body:JSON.stringify({models:OR_BROWSER_MODELS,max_tokens:6000,response_format:{type:'json_object'},reasoning:{effort:'low',exclude:true},messages:[{role:'system',content:'You are part of Policy Tabletop, a rehearsal tool for government staff. Follow the instructions in the user message exactly. When asked for JSON, reply with only the JSON value.'},{role:'user',content:String(input)}]})}); }
   catch{ throw {code:'upstream_error'}; }
   if (res.status===401 || res.status===403) throw {code:'bad_key'};
   if (res.status===429) throw {code:'rate_limited'};

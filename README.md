@@ -12,10 +12,11 @@ This repository deploys as-is to Vercel's free Hobby plan (personal, non-commerc
    - `PROVIDER`: `openrouter`
    - `OPENROUTER_API_KEY`: your key
    - `TABLETOP_PASSCODE`: a passcode you share with your demo audience
-   - `OPENROUTER_MODEL` (optional): up to three model IDs separated by commas, tried in order when one is busy. It defaults to three free models, led by `qwen/qwen3.8-27b:free`. Free ones end in `:free`; see openrouter.ai/models.
+   - `OPENROUTER_MODEL` (optional): preferred model IDs separated by commas. They're tried first; after them, the server tries every other free model OpenRouter lists, up to 10 per request, until one gives a readable reply.
+   - `ANTHROPIC_API_KEY` (optional, recommended): a last resort. If every free model is busy, the request goes to Claude Haiku for a fraction of a cent, so users always get a response. Set a small monthly spend limit on this key.
 4. Click **Deploy**. Share the site address and the passcode.
 
-**Limits of free models:** OpenRouter allows 20 requests a minute on free models. It allows 50 a day on accounts that have bought less than $10 of credit (about one or two full sessions), and 1,000 a day after a one-time $10 purchase. When a free model is busy, the site waits and retries, then falls back to the next model. If the daily limit is used up, it says so. Open models follow the tool's rules (clean structured output, cite only listed sources) less reliably than Claude, so expect some retries.
+**Limits of free models:** OpenRouter allows 20 requests a minute on free models. It allows 50 a day on accounts that have bought less than $10 of credit (about one or two full sessions), and 1,000 a day after a one-time $10 purchase. When a free model is busy, slow or gives a reply that can't be read, the server moves to the next free model, and each request can take up to 5 minutes. If the daily limit is used up, it says so. Open models follow the tool's rules (clean structured output, cite only listed sources) less reliably than Claude, so expect some retries.
 
 ### Other providers
 
