@@ -113,6 +113,7 @@ textarea{resize:vertical;min-height:60px}
 .note.warn{border-left-color:var(--signal);color:var(--ink)}
 
 /* stage */
+.stage > .mtabs{grid-column:1/-1}
 .stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start;border-top:1px solid var(--line);padding-top:24px}
 @media (max-width:960px){.stage{grid-template-columns:minmax(0,1fr)}}
 .tablebox{display:grid;gap:14px}
@@ -482,6 +483,63 @@ body{padding-bottom:120px}
 header.top{gap:14px}
 .appbar .ts{display:none}
 @media (max-width:520px){.banner span{display:none}.brand .label{display:none}.appbar .has-ts .t{display:none}.appbar .has-ts .ts{display:inline}}
+/* setup: review page */
+.review{display:grid;gap:30px;max-width:860px}
+.rhead h2{font-size:clamp(1.35rem,3vw,1.9rem);font-weight:700;letter-spacing:-.02em}
+.rhead p{color:var(--ink-2);margin-top:6px}
+.rsec{display:grid;gap:12px}
+.rsec > .label{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.qopts{display:grid;gap:10px}
+.qopt{display:grid;grid-template-columns:22px minmax(0,1fr);gap:12px;align-items:start;text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;background:transparent;font-size:1rem;line-height:1.45}
+.qopt .rd{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line-2);margin-top:2px;display:grid;place-items:center}
+.qopt[aria-checked="true"]{border-color:var(--ink)}
+.qopt[aria-checked="true"] .rd{border-color:var(--ink)}
+.qopt[aria-checked="true"] .rd::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--ink)}
+.qopt .qtag{display:block;font-size:.7rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px}
+.qopt:hover{border-color:var(--ink-3)}
+.ocards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.ocard{display:grid;gap:6px;align-content:start;text-align:left;border:1.5px solid var(--line);border-radius:12px;padding:14px;background:transparent}
+.ocard b{font-size:.95rem}
+.ocard span{font-size:.84rem;color:var(--ink-2);line-height:1.45}
+.ocard .otag{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);display:flex;justify-content:space-between}
+.ocard[aria-pressed="true"]{border-color:var(--ink);background:var(--surface-2)}
+.ocard[aria-pressed="true"] .otag::after{content:"★ Leaning toward";color:var(--signal);font-family:var(--sans);font-weight:600}
+button.ocard:hover{border-color:var(--ink-3)}
+.seatchips{display:flex;gap:8px;flex-wrap:wrap}
+.seatchip{display:inline-flex;gap:7px;align-items:center;font-size:.84rem;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 8px}
+.seatchip i{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--gc);display:inline-block}
+.seatchip.absent i{border-style:dashed}
+.riskchips{display:flex;gap:8px;flex-wrap:wrap}
+.riskchips span{font-size:.84rem;background:var(--surface-2);border-radius:999px;padding:5px 12px}
+.checkrow{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2)}
+.drafting{display:flex;gap:10px;align-items:center;font-size:.9rem;color:var(--ink-2)}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--ink);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+/* mobile debate panes */
+.mtabs{display:none}
+@media (max-width:760px){
+  .mtabs{display:flex;gap:4px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;margin:-8px 0 4px}
+  .mtabs button{flex:1;border:1px solid var(--line);background:transparent;border-radius:999px;padding:8px 0;font-size:.86rem;font-weight:500;color:var(--ink-3)}
+  .mtabs button[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+  #stage{gap:14px;padding-top:12px}
+  #stage[data-m="transcript"] .tablebox, #stage[data-m="transcript"] .composer{display:none}
+  #stage[data-m="steer"] .tablebox, #stage[data-m="steer"] .transcript, #stage[data-m="steer"] .agreebar{display:none}
+  #stage[data-m="table"] .transcript, #stage[data-m="table"] .agreebar, #stage[data-m="table"] .composer{display:none}
+}
+/* mobile comfort */
+@media (max-width:620px){
+  body{padding-inline:16px}
+  input,select,textarea{font-size:16px!important}
+  .pill,.focus,.tabs button,.seg button,.bnav button,.tgl{min-height:36px}
+  .btn{min-height:40px}
+  .brand strong{white-space:nowrap}
+  .row2,.inline3{grid-template-columns:minmax(0,1fr)!important}
+  .es-headline{font-size:1.25rem}
+  .ipage,.screen{min-height:calc(100dvh - 240px)}
+  .hero .herofig{max-width:220px}
+  .appbar{padding-inline:16px}
+}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -509,7 +567,8 @@ header.top{gap:14px}
   <div class="screen" id="scr-welcome" hidden><section id="introPanel"></section></div>
   <div class="screen" id="scr-setup"><section class="panel" id="setupPanel"></section></div>
   <div class="screen" id="scr-debate" hidden>
-    <section class="stage" id="stage">
+    <section class="stage" id="stage" data-m="transcript">
+      <div class="mtabs" role="tablist" aria-label="Debate view"><button role="tab" data-m="table" aria-selected="false">Table</button><button role="tab" data-m="transcript" aria-selected="true">Transcript</button><button role="tab" data-m="steer" aria-selected="false">Steer</button></div>
       <div class="tablebox">
         <div class="table" id="table"><div class="felt" id="felt"></div></div>
         <div class="legend" id="legend"></div>
@@ -560,7 +619,7 @@ header.top{gap:14px}
 <script>
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-var UI = {view:'summary', screen:'setup', introPage:0, briefPage:0, briefPages:[], readyNoted:false, open:{}, keyOnly:false, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
+var UI = {view:'summary', screen:'setup', setupPage:0, introPage:0, briefPage:0, briefPages:[], readyNoted:false, open:{}, keyOnly:false, showStage:false, side:'transcript', apiKey:'', keyMode:false, pass:'', needPass:false, server:false, economy:false, modelLabel:'', keyProvider:'anthropic'};
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs||{})){
@@ -1030,7 +1089,7 @@ function transcriptText(maxChars=14000){
 }
 const srcFrom = (s, idx) => { const n=Number(idx); return n>=1 && n<=s.sources.length ? s.sources[n-1] : null; };
 const estArr = a => S.risks.map((_,i)=>clamp(Array.isArray(a)?a[i]:0));
-function busy(msg){ S.live.busy = msg; renderFoot(); }
+function busy(msg){ S.live.busy = msg; renderFoot(); if (UI.screen==='setup') renderAppbar(); }
 async function askJSON(prompt, tier='default'){
   if (!SAMPLE) throw {code:'unavailable'};
   return await SAMPLE.json(prompt, {modelTier:tier});
@@ -1072,6 +1131,7 @@ ${(S.context||'').slice(0,8000)}
 
 Return only JSON of this shape:
 {"sharpened":"one precise decision question",
+ "alternatives":["2 other ways to frame the same decision, each one plain sentence ending in a question mark"],
  "options":[{"label":"≤4 words","desc":"one sentence"}],
  "seats":[{"role":"role name","group":"internal|external|absent|redteam","perspective":"one sentence","sources":["2 or 3 grounding sources"]}],
  "risks":[{"short":"≤4 words","text":"one event that either happens or not within the horizon"}]}
@@ -1080,6 +1140,8 @@ Requirements: 3 or 4 options, including a minimal or "do nothing more" option. $
   try{
     const r = await askJSON(prompt,'default');
     S.question = String(pick(r,['sharpened','question','decision_question'])||q); S.questionConfirmed = false;
+    const alts = asList(pick(r,['alternatives','alternative_questions','alternates'])).map(x=>String(typeof x==='object'&&x?(x.question||x.text||''):x).trim()).filter(Boolean);
+    S.questionAlts = uniq([S.question, ...alts]).slice(0,3);
     applySetupParts(r);
     // If the model skipped or shortened any part, ask once more for just the missing pieces.
     const need = [];
@@ -1095,6 +1157,7 @@ Requirements: 3 or 4 options, including a minimal or "do nothing more" option. $
     S.live.drafted = true; S.live.busy = null;
   }catch(e){ S.live.busy=null; toast(errCopy(e)); }
   renderAll();
+  if (S.live.drafted && UI.screen==='setup') setSetupPage(1);
 }
 
 function normStance(v){
@@ -1278,7 +1341,7 @@ async function liveEvidence(text){
 
 /* ---------- actions ---------- */
 function setMode(mode){
-  pause(); S = freshState(mode); UI.briefPage=0; renderAll(); go('setup');
+  pause(); S = freshState(mode); UI.briefPage=0; UI.setupPage=0; renderAll(); go('setup');
 }
 function startTabletop(){
   if (!S.questionConfirmed){ toast('Confirm the decision question first.'); return; }
@@ -1500,16 +1563,12 @@ function renderSetup(){
   if (p.contains(document.activeElement) && p.dataset.sig===setupSig()) return; // don't rebuild while typing
   p.dataset.sig = setupSig();
   const kids = [];
-  if (S.mode==='live'){
-    kids.push(h('div',{class:'panel-head'},h('h2',{},'Start a session'),h('span',{class:'small muted'},'Describe it in a sentence or two. Claude drafts the rest and you confirm it.')));
+  if (S.mode==='live' && (!S.live.drafted || !UI.setupPage)){
+    kids.push(h('div',{class:'rhead',style:'margin-bottom:18px'},h('h2',{},'Describe your decision'),h('p',{},'A sentence or two is enough. The tool drafts the rest, and you review it on the next screen.')));
     kids.push(intakeBlock());
-    if (!S.live.drafted){ p.replaceChildren(...kids); return; }
-    kids.push(h('hr',{class:'rule'}));
-  } else {
-    kids.push(h('div',{class:'panel-head'},h('h2',{},'Example session'),h('span',{class:'small muted'},'A worked example with fictional internal records.')));
+    p.replaceChildren(...kids); return;
   }
-  kids.push(readyBlock());
-  p.replaceChildren(...kids);
+  p.replaceChildren(reviewBlock());
 }
 function intakeBlock(){
   return h('div',{class:'intake'},
@@ -1531,6 +1590,7 @@ function intakeBlock(){
       h('div',{class:'field'},h('label',{for:'liveHorizon'},'Look ahead'),h('select',{id:'liveHorizon',onchange:e=>{S.horizon=Number(e.target.value);S.reviewDate=addMonths(S.horizon);renderHeader();}},...[3,6,12,24].map(m=>h('option',{value:m,selected:S.horizon===m},`${m} months`)))),
       h('button',{class:'btn primary',id:'draftBtn',onclick:draftSetup,disabled:!SAMPLE||!!S.live.busy},S.live.busy?'Drafting…':S.live.drafted?'Redraft':'Draft the session →')
     ),
+    S.live.busy ? h('div',{class:'drafting',role:'status'},h('span',{class:'spin'}),S.live.busy) : null,
     liveStatusBlock(),
     h('p',{class:'small muted'},'Returning to a session? ',h('label',{class:'linkbtn',for:'loadSession0',style:'cursor:pointer'},'Load a saved session',h('input',{type:'file',id:'loadSession0',accept:'.json,application/json',hidden:true,onchange:loadSession})))
   );
@@ -1553,6 +1613,38 @@ function liveStatusBlock(){
     h('div',{style:'display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px'},h('input',{type:'password',id:'apiKey','aria-label':'API key',placeholder:'sk-or-… or sk-ant-…',autocomplete:'off'}),h('button',{class:'btn primary',onclick:connectKey},'Connect')),
     h('label',{class:'small',style:'display:flex;gap:6px;align-items:center'},h('input',{type:'checkbox',id:'rememberKey'}),'Remember until this tab closes'),
     h('p',{class:'small muted'},'The key is sent only to the provider you pick. Anyone using this browser could use it while connected, so set a spend limit. Free OpenRouter models are rate-limited and may log prompts; never paste sensitive material.'));
+}
+function setSetupPage(i){
+  const d = i < (UI.setupPage||0) ? -1 : 1; UI.setupPage = i;
+  renderSetupForce(); animateIn($('#setupPanel'), d); window.scrollTo({top:0}); renderAppbar();
+}
+function reviewBlock(){
+  const live = S.mode==='live';
+  const hasAbsent = S.seats.some(s=>s.included&&s.group==='absent'), hasRed = S.seats.some(s=>s.included&&s.group==='redteam');
+  const alts = live ? uniq([...(S.questionAlts||[]), S.question].filter(Boolean)) : [S.question];
+  const qs = live && S.rawQuestion && !alts.includes(S.rawQuestion) ? [...alts, S.rawQuestion] : alts;
+  const tagFor = (q,i) => q===S.rawQuestion && i===qs.length-1 && live ? 'Your words' : i===0 ? 'Suggested' : 'Another framing';
+  const setQ = q => { S.question=q; $('#qText').textContent=q; const ta=$('#sq'); if (ta) ta.value=q; document.querySelectorAll('.qopt').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.q===q))); };
+  return h('div',{class:'review'},
+    h('div',{class:'rhead'},h('h2',{},live?'Here’s the draft':'The example session'),h('p',{},live?'Pick the question to rehearse, then check who is at the table. Tap anything to change it.':'A worked example with fictional internal records. Start it, or skip straight to the results.')),
+    h('div',{class:'rsec'},h('div',{class:'label'},live && qs.length>1 ? 'Pick the question' : 'The question'),
+      h('div',{class:'qopts',role:'radiogroup','aria-label':'Suggested questions'},...qs.map((q,i)=>h('button',{class:'qopt',role:'radio','aria-checked':String(q===S.question),'data-q':q,onclick:()=>setQ(q)},h('span',{class:'rd'}),h('span',{},h('span',{class:'qtag'},qs.length>1?tagFor(q,i):(live?'Suggested':'Example question')),q)))),
+      det('qedit', live && qs.length>1 ? 'Edit the wording' : 'Edit the question', h('textarea',{id:'sq',rows:3,'aria-label':'Decision question',oninput:e=>{S.question=e.target.value;$('#qText').textContent=S.question;document.querySelectorAll('.qopt').forEach(b=>b.setAttribute('aria-checked','false'));}},S.question))),
+    h('div',{class:'rsec'},h('div',{class:'label'},h('span',{},`Options · ${S.options.length}`),live?h('span',{style:'text-transform:none;letter-spacing:0;font-weight:400'},'Tap the one you lean toward (optional)'):null),
+      h('div',{class:'ocards'},...S.options.map((o,i)=>{ const on = S.preferred===o.id || (!live && o.id==='o3');
+        const kids=[h('span',{class:'otag'},'O'+(i+1)),h('b',{},o.label||'Untitled option'),o.desc?h('span',{},o.desc):null];
+        return live ? h('button',{class:'ocard','aria-pressed':String(on),onclick:()=>{S.preferred = S.preferred===o.id?'':o.id; renderSetupForce();}},...kids) : h('div',{class:'ocard','aria-pressed':String(on)},...kids); }))),
+    h('div',{class:'rsec'},h('div',{class:'label'},`At the table · ${inSeats().length} seats`),
+      h('div',{class:'seatchips'},...inSeats().map(s=>h('span',{class:'seatchip '+s.group},h('i',{style:`--gc:${GROUPS[s.group].color}`}),s.role))),
+      h('div',{class:'checkrow'},h('span',{},hasAbsent?'✓ Absent voice included':'✗ No absent voice'),h('span',{},hasRed?'✓ Red Team included':'✗ No Red Team'),h('span',{},S.runMode==='quick'?'Quick brief':'Full workshop')),
+      (!hasAbsent||!hasRed) ? h('p',{class:'note warn'},'Include one absent-voice seat and one Red Team seat. They guard against missing voices and easy agreement.') : null),
+    h('div',{class:'rsec'},h('div',{class:'label'},`Risks to watch · ${S.horizon} months`),
+      h('div',{class:'riskchips'},...S.risks.map(r=>h('span',{},r.short)))),
+    det('edit','Edit options, risks and seats', editorGrid()),
+    h('div',{class:'btnrow'},
+      !live ? h('button',{class:'btn',onclick:showFinished},'Skip to the results') : null,
+      h('label',{class:'btn',for:'loadSession1'},'Load a saved session',h('input',{type:'file',id:'loadSession1',accept:'.json,application/json',hidden:true,onchange:loadSession})))
+  );
 }
 function readyBlock(){
   const hasAbsent = S.seats.some(s=>s.included&&s.group==='absent'), hasRed = S.seats.some(s=>s.included&&s.group==='redteam');
@@ -1613,7 +1705,7 @@ function editorGrid(){
   );
   return h('div',{class:'setup-grid'},left,right);
 }
-function setupSig(){ return [S.mode,S.options.length,S.risks.length,S.seats.length,inSeats().length,S.live.drafted,!!S.live.busy,SAMPLE===undefined?'u':SAMPLE?'y':'n'].join('|'); }
+function setupSig(){ return [UI.setupPage,S.mode,S.options.length,S.risks.length,S.seats.length,inSeats().length,S.live.drafted,!!S.live.busy,SAMPLE===undefined?'u':SAMPLE?'y':'n'].join('|'); }
 function renderSetupForce(){ $('#setupPanel').dataset.sig=''; document.activeElement?.blur?.(); renderSetup(); renderHeader(); }
 
 function renderTable(){
@@ -2156,6 +2248,7 @@ function openDrawer(name, meta){
   setTimeout(()=>$('#drawerClose')?.focus(),0);
 }
 function closeDrawer(){ $('#drawer').hidden = true; if (drawerReturn?.focus) drawerReturn.focus(); }
+document.querySelectorAll('.mtabs button').forEach(b=>b.onclick=()=>{ $('#stage').dataset.m=b.dataset.m; document.querySelectorAll('.mtabs button').forEach(x=>x.setAttribute('aria-selected',String(x===b))); });
 document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('#drawer').hidden) closeDrawer(); });
 function textWithCites(txt){
   const parts = String(txt||'').split(/\[Source:\s*([^\]]+)\]/i);
@@ -2379,7 +2472,7 @@ function go(k){
   const prev = UI.screen; UI.screen = k;
   if (k==='welcome') { renderIntro(); setIntroPage(UI.introPage||0, 0, true); } else markIntroSeen();
   for (const [s] of SCREENS) $('#scr-'+s).hidden = s!==k;
-  const qb = document.querySelector('.question'); qb.hidden = k==='welcome'; qb.classList.toggle('compact', k!=='setup'); $('#qText').title = k!=='setup' ? (S.question||'') : '';
+  const qb = document.querySelector('.question'); qb.hidden = k==='welcome' || (k==='setup' && !S.started); qb.classList.toggle('compact', k!=='setup'); $('#qText').title = k!=='setup' ? (S.question||'') : '';
   $('#stepper').hidden = k!=='debate';
   if (prev!==k){ animateIn($('#scr-'+k), order.indexOf(k) < order.indexOf(prev) ? -1 : 1); window.scrollTo({top:0}); }
   renderFlowbar(); renderAppbar();
@@ -2418,11 +2511,18 @@ function renderAppbar(){
     L = back('Back', ()=>setIntroPage(i-1), i===0); C = dots(INTRO_LABELS, i, j=>setIntroPage(j));
     R = i<n-1 ? next('Next', ()=>setIntroPage(i+1)) : next('Set up a session', ()=>go('setup'));
   } else if (k==='setup'){
-    L = back('How it works', ()=>go('welcome')); C = h('span',{class:'where'},'Step 2 of 5');
-    R = S.started ? next('Back to the debate', ()=>go('debate'))
-      : S.mode==='demo' ? next('Start the example', ()=>{ S.questionConfirmed=true; startTabletop(); })
-      : S.live.drafted ? next('Confirm and start', ()=>{ S.questionConfirmed=true; startTabletop(); })
-      : next('Start', ()=>{}, {dis:true});
+    const sp = UI.setupPage||0;
+    const start = ()=>{ S.questionConfirmed=true; startTabletop(); };
+    if (S.started){ L = back('How it works', ()=>go('welcome')); C = h('span'); R = next('Back to the debate', ()=>go('debate')); }
+    else if (S.mode==='demo'){ L = back('How it works', ()=>go('welcome')); C = h('span',{class:'where'},'Example'); R = next('Start the example', start, {short:'Start'}); }
+    else if (!sp || !S.live.drafted){
+      L = back('How it works', ()=>go('welcome')); C = dots(['Describe','Review'], 0, j=>{ if (j && S.live.drafted) setSetupPage(1); });
+      R = S.live.busy ? next('Drafting…', ()=>{}, {dis:true}) : next(S.live.drafted?'Redraft':'Draft it', draftSetup, {dis:!SAMPLE});
+      if (S.live.drafted && !S.live.busy) R = h('div',{class:'btnrow'},h('button',{class:'btn',onclick:draftSetup},'Redraft'),next('Review', ()=>setSetupPage(1)));
+    } else {
+      L = back('Describe', ()=>setSetupPage(0)); C = dots(['Describe','Review'], 1, j=>{ if (!j) setSetupPage(0); });
+      R = next(S.runMode==='quick'?'Run the quick brief':'Confirm and start', start, {short:'Start'});
+    }
   } else if (k==='debate'){
     L = back('Set up', ()=>go('setup')); C = h('span',{class:'where'},STAGES.find(x=>x[0]===S.stage)[1]);
     R = ready ? next('See the brief', ()=>go('brief'), {pulse:true})
