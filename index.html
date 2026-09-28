@@ -627,6 +627,18 @@ button.ocard:hover{border-color:var(--ink-3)}
 .sugrow{display:flex;gap:8px;flex-wrap:wrap}
 .sugchip{border:1px dashed var(--line-2);background:transparent;border-radius:999px;padding:6px 12px;font-size:.84rem;text-align:left}
 .sugchip:hover{border-color:var(--ink)}
+.authors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:900px}
+@media (max-width:700px){.authors{grid-template-columns:minmax(0,1fr)}}
+.author{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;border:1px solid var(--line);border-radius:12px;padding:16px}
+.avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--bg);font-weight:700;font-size:.9rem;letter-spacing:.04em}
+.amain{display:grid;gap:6px;align-content:start}
+.amain b{font-size:1.05rem}
+.arole{font-size:.8rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.amain p{font-size:.9rem;color:var(--ink-2)}
+.amain .btn{justify-self:start;text-decoration:none;color:var(--ink)}
+.credit{margin:0 0 6px;font-size:.8rem;color:var(--ink-3)}
+.credit a{color:var(--ink-2)}
+.credit .linkbtn{font-size:.8rem;color:var(--ink-2)}
 </style>
 
 <div class="banner"><b>Rehearsal only.</b><span>Seats are simulated roles, not real people. Take every output to real experts before deciding.</span></div>
@@ -692,6 +704,7 @@ button.ocard:hover{border-color:var(--ink-3)}
   <aside class="drawer" id="drawer" role="complementary" aria-labelledby="drawerTitle" hidden></aside>
 
   <footer class="guard">
+    <p class="credit">Built by <a href="https://www.linkedin.com/in/soumyakalra/" target="_blank" rel="noopener noreferrer">Soumya Kalra</a> and <a href="https://www.linkedin.com/in/liz-tucker-26a8a538" target="_blank" rel="noopener noreferrer">Liz Tucker</a> · <button type="button" class="linkbtn" id="authorsLink">About the authors</button></p>
     <details><summary>Guardrails and how this tool should be used</summary>
     <ul style="margin-top:8px">
       <li>Seats are roles, never named individuals. They cite only their listed sources; anything else is flagged "No source: reasoning only."</li>
@@ -2915,14 +2928,26 @@ function renderIntro(){
         h('span',{},icon('source'),'Cites only the sources you give it'),
         h('span',{},icon('people'),'Informs a decision; people make it')),
     h('div',{class:'introfoot'},h('b',{},'Ready to try it?'),
-      h('div',{class:'btnrow'},h('button',{class:'btn',onclick:goIntroExample},'See a finished example'),h('button',{class:'btn primary',onclick:goIntroStart},'Start your own ',icon('arrow')))))
+      h('div',{class:'btnrow'},h('button',{class:'btn',onclick:goIntroExample},'See a finished example'),h('button',{class:'btn primary',onclick:goIntroStart},'Start your own ',icon('arrow'))))),
+    pg('Who built this','Built by Soumya and Liz.',
+      h('p',{class:'sub',style:'max-width:62ch;color:var(--ink-2)'},'We came to this from two sides of the same table: one of us spent years inside government making policy, and the other wants to see, as a member of the public, how those decisions get made.'),
+      h('div',{class:'authors'},...AUTHORS.map(a=>h('div',{class:'author'},
+        h('div',{class:'avatar','aria-hidden':'true'},a.initials),
+        h('div',{class:'amain'},h('b',{},a.name),h('span',{class:'arole'},a.role),h('p',{},a.bio),
+          h('a',{class:'btn',href:a.linkedin,target:'_blank',rel:'noopener noreferrer'},'LinkedIn ↗'))))),
+      h('p',{class:'small muted'},'Questions or feedback on the tool? Reach out to either of us on LinkedIn.'))
   ));
   setIntroPage(UI.introPage||0, 0, true);
 }
 
 /* ---------- app flow: one screen at a time ---------- */
 const SCREENS = [['welcome','How it works'],['setup','Set up'],['debate','Debate'],['brief','Brief'],['detail','Detail']];
-const INTRO_LABELS = ['Welcome','The problem','How it works','Two ways to run it','What you get'];
+const INTRO_LABELS = ['Welcome','The problem','How it works','Two ways to run it','What you get','Who built this'];
+const AUTHORS = [
+  {name:'Soumya Kalra', initials:'SK', role:'Data and AI governance', bio:'Fifteen years building data systems across financial regulation and fintech, including the Federal Reserve, the SEC and Treasury’s Office of Financial Research. She came to this project as a member of the public who wants to see how decisions get made.', linkedin:'https://www.linkedin.com/in/soumyakalra/'},
+  {name:'Liz Tucker', initials:'LT', role:'Founder, Statecraft AI', bio:'Former Director for International Economics at the National Security Council and Senior Advisor for National Security at the Council of Economic Advisers. She now helps AI safety researchers and organizations communicate with policymakers.', linkedin:'https://www.linkedin.com/in/liz-tucker-26a8a538'}
+];
+function showAuthors(){ go('welcome'); setIntroPage(INTRO_LABELS.length-1); }
 function hasResults(){ return !!(S.summary || Object.keys(S.landing||{}).length); }
 function screenOk(k){ return k==='welcome' || k==='setup' || (k==='debate' && S.started) || ((k==='brief'||k==='detail') && hasResults()); }
 function animateIn(el, dir){ if (!el) return; el.classList.remove('enter'); el.style.setProperty('--dx', dir<0?-1:1); void el.offsetWidth; el.classList.add('enter'); }
@@ -2969,7 +2994,7 @@ function renderAppbar(){
   if (k==='welcome'){
     const i = UI.introPage||0, n = INTRO_LABELS.length;
     L = back('Back', ()=>setIntroPage(i-1), i===0); C = dots(INTRO_LABELS, i, j=>setIntroPage(j));
-    R = i<n-1 ? next('Next', ()=>setIntroPage(i+1)) : next('Set up a session', ()=>go('setup'));
+    R = i<n-1 ? next('Next', ()=>setIntroPage(i+1)) : next('Set up a session', ()=>go('setup'), {short:'Set up'});
   } else if (k==='setup'){
     const sp = UI.setupPage||0;
     const start = ()=>{ S.questionConfirmed=true; startTabletop(); };
@@ -3125,6 +3150,7 @@ $('#sideT').onclick = ()=>setSide('transcript');
 $('#sideS').onclick = ()=>setSide('synthesis');
 try{ new IntersectionObserver(([e])=>{ $('#stickyBar').classList.toggle('show', !e.isIntersecting && e.boundingClientRect.top<0); }).observe($('#qText')); }catch{}
 $('#dlTranscript').onclick = ()=>exportTranscript();
+$('#authorsLink').onclick = ()=>showAuthors();
 $('#newTurns').onclick = ()=>{ const l=$('#tlist'); l.scrollTo({top:l.scrollHeight, behavior:'smooth'}); $('#newTurns').hidden=true; UI.unseen=0; };
 $('#tlist').addEventListener('scroll', ()=>{ const l=$('#tlist'); if (l.scrollHeight - l.scrollTop - l.clientHeight < 80){ $('#newTurns').hidden=true; UI.unseen=0; } }, {passive:true});
 $('#keyToggle').onclick = e=>{ UI.keyOnly=!UI.keyOnly; e.currentTarget.setAttribute('aria-pressed',UI.keyOnly); e.currentTarget.textContent = UI.keyOnly ? 'Show everything' : 'Key exchanges only'; lastTurnCount=0; $('#tlist').replaceChildren(); renderTranscript(); };
