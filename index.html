@@ -1547,7 +1547,7 @@ function startTabletop(){
   S.started = true; S.reviewDate = addMonths(S.horizon);
   if (funOn() && S.funStyle==='surprise'){ const ks=Object.keys(FUN_STYLES).filter(k=>k!=='surprise'); S.funStyle = ks[Math.floor(Math.random()*ks.length)]; toast(`Surprise: ${funStyle().emoji} ${funStyle().label}!`); }
   S.mixed = S.mode==='live' && mixedOn(); if (S.mixed){ assignVoices(); S.voicePlan = {...UI.voices}; }
-  UI.t0 = Date.now(); UI.briefLogged = false;
+  UI.t0 = Date.now(); UI.briefLogged = false; UI.shareId = newSid(); UI.shared = false; UI.autoShared = false; UI.unshared = false;
   track('debate_start',{run:S.runMode||'demo', tone:S.tone||'serious', style:funOn()?S.funStyle:undefined, seats:inSeats().length, has_context:!!S.context, context_items:S.contextItems.filter(x=>x.text.trim()).length, mixed:!!S.mixed, horizon:S.horizon, private_available:privateAvailable()});
   if (S.mode==='demo'){ S.queue = demoScript(); play(); }
   else { if (!SAMPLE){ toast(ERR.unavailable); return; } S.playing=true; renderAll(); liveRun('r1'); loop(); }
@@ -1899,6 +1899,8 @@ function tableBlock(){
       h('input',{type:'text',id:'nsPersp','aria-label':'Perspective',placeholder:'Their view in one sentence (optional)'}),
       h('div',{class:'btnrow'},h('button',{class:'btn primary',type:'button',onclick:()=>{ const role=($('#nsRole').value||'').trim(); if (!role){ toast('Name the role first.'); return; } addSeat({role, group:$('#nsGroup').value, perspective:($('#nsPersp').value||'').trim(), why:'Added by you.'}); }},'Add seat'),h('span',{class:'small muted'},'Seats are roles, never real people. It cites only sources you list under “Edit options, risks and seats.”')))) : null,
     h('p',{class:'small muted'},`${inc.length} seat${inc.length===1?'':'s'} at the table.${inc.length<3?' Add at least 3 to start.':''}`)
+,
+    shareNotice()
   );
 }
 function readyBlock(){
@@ -1917,6 +1919,7 @@ function readyBlock(){
       h('span',{class:'chip'},S.runMode==='quick'?'Quick brief':'Full workshop'),
       hasAbsent?h('span',{class:'chip'},'✓ absent voice'):null, hasRed?h('span',{class:'chip'},'✓ Red Team'):null),
     (!hasAbsent||!hasRed) ? h('p',{class:'note warn'},'Include one absent-voice seat and one Red Team seat. They guard against missing voices and easy agreement.') : null,
+    shareNotice(),
     h('div',{class:'btnrow'},
       h('button',{class:'btn primary',onclick:()=>{S.questionConfirmed=true;startTabletop();}},S.mode==='live'&&S.runMode==='quick'?'Confirm and run the quick brief →':'Confirm and start →'),
       S.mode==='demo' ? h('button',{class:'btn',onclick:showFinished},'Skip to the results') : null,
@@ -2278,7 +2281,7 @@ function renderSummary(){
   const lev = rows.filter(r=>r.lever);
   const hasLand = Object.keys(S.landing).length>0;
   const so = S.secondOpinion || (S.mode==='demo' ? DEMO_SECOND : null);
-  if (S.finished && !UI.briefLogged){ UI.briefLogged = true; track('brief_ready',{secs:UI.t0?Math.round((Date.now()-UI.t0)/1000):0, turns:S.turns.length, steers:S.steers.length, seats:inSeats().length, second_opinion:!!S.secondOpinion, warnings:warn.length}); }
+  if (S.finished && !UI.briefLogged){ UI.briefLogged = true; track('brief_ready',{secs:UI.t0?Math.round((Date.now()-UI.t0)/1000):0, turns:S.turns.length, steers:S.steers.length, seats:inSeats().length, second_opinion:!!S.secondOpinion, warnings:warn.length}); setTimeout(autoShare, 0); }
   const more = (n, id) => n>0 ? h('button',{class:'morelink',onclick:()=>jumpDetail(id)},`+${n} more`) : null;
   const take = (ic, label, text, who, n, id, hot) => h('div',{class:'take'+(hot?' hot':'')},
     h('div',{class:'tkh'},icon(ic),h('span',{class:'label'},label)),
@@ -2318,8 +2321,12 @@ function renderSummary(){
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
         h('button',{class:'btn primary',onclick:()=>exportPublic(),title:'A plain-language explanation of the options, what was weighed and the sources, for people outside the room'},'Publish the reasoning'))),
     canShare() ? h('div',{class:'sharebox'},icon('question'),
-      h('p',{}, UI.shared ? 'Thanks for sharing this session. It helps us see where the tool falls short.' : 'Was this useful? Sharing the question and brief with us (after you see exactly what’s sent) is the best way to help improve it.'),
-      UI.shared ? null : h('button',{class:'btn',type:'button',onclick:openShare},'Share this session')) : null,
+      h('p',{}, UI.shared ? 'Your question and brief were shared with Soumya and Liz to help improve the tool (personal details removed, no documents). Thank you. You can add a note, or take it back.'
+        : UI.unshared ? 'Removed. We don’t have this session’s question or brief.'
+        : UI.shareBusy ? 'Sharing your question and brief…'
+        : 'Was this useful? Sharing the question and brief with us (after you see exactly what’s sent) is the best way to help improve it.'),
+      UI.shared ? h('button',{class:'btn',type:'button',onclick:openShare},'Add a note or transcript') : UI.shareBusy ? null : h('button',{class:'btn',type:'button',onclick:openShare},'Share this session'),
+      UI.shared ? h('button',{class:'linkbtn small',type:'button',onclick:unshare},'Remove it') : null) : null,
     modelLine() ? h('p',{class:'small muted',style:'margin-top:14px'},modelLine()) : null
   ].filter(Boolean));
 }
@@ -2632,6 +2639,7 @@ function privacyStrip(){
     UI.analytics && HOSTED ? h('div',{class:'statsline'},
       h('span',{}, UI.privSession || privateNow() ? 'Usage stats: off while Private mode is or was on this session.' : UI.statsOff ? 'Anonymous usage stats: off.' : `Anonymous usage stats: on. We count clicks, like which mode you picked, never what you type. Deleted after ${UI.retention} days.`),
       UI.privSession || privateNow() ? null : h('button',{class:'linkbtn small',type:'button',onclick:()=>setStats(UI.statsOff)}, UI.statsOff ? 'Turn on' : 'Turn off')) : null,
+    shareNotice(),
     h('div',{class:'btnrow'},h('button',{class:'linkbtn small',type:'button',onclick:clearEverything},'Clear everything')));
 }
 function clearEverything(){
@@ -2641,7 +2649,7 @@ function clearEverything(){
   if (UI.keyMode){ UI.apiKey=''; UI.keyMode=false; SAMPLE=null; }
   try{ sessionStorage.removeItem('pt_key'); sessionStorage.removeItem('pt_prov'); }catch{}
   document.querySelectorAll('input[type=file]').forEach(x=>x.value='');
-  track('clear'); S = freshState(mode); UI.setupPage=0; UI.briefPage=0; UI.privateTouched=false; UI.privateMode=false; UI.open={}; UI.sid=newSid(); UI.privSession=false; UI.shared=false;
+  track('clear'); S = freshState(mode); UI.setupPage=0; UI.briefPage=0; UI.privateTouched=false; UI.privateMode=false; UI.open={}; UI.sid=newSid(); UI.privSession=false; UI.shared=false; UI.autoShared=false; UI.unshared=false;
   renderAll(); go('setup'); toast('Cleared. Nothing from that session remains in this browser.');
 }
 function addContextItem(item){ S.contextItems.push({type:'empirical', name:'', text:'', ...item}); rebuildContext(); }
@@ -3077,6 +3085,8 @@ function newSid(){ try{ return crypto.randomUUID(); }catch{ return 'x'+Math.rand
 UI.sid = newSid(); UI.analytics = false; UI.retention = 90; UI.privSession = false; UI.shared = false; UI.t0 = 0;
 UI.statsOff = navigator.doNotTrack==='1' || navigator.globalPrivacyControl===true;
 try{ if (localStorage.getItem('pt_stats')==='off') UI.statsOff = true; }catch{}
+UI.shareAuto = !(navigator.doNotTrack==='1' || navigator.globalPrivacyControl===true);
+try{ if (localStorage.getItem('pt_share')==='off') UI.shareAuto = false; }catch{}
 function privateNow(){ return !!(UI.privateMode && privateAvailable()); }
 function canTrack(){ try{ return HOSTED && !!EVENT_API && UI.analytics && !UI.statsOff && !UI.privSession && !privateNow(); }catch{ return false; } }
 function canShare(){ try{ return HOSTED && !!EVENT_API && UI.analytics && !UI.privSession && !privateNow() && S.mode==='live'; }catch{ return false; } }
@@ -3090,6 +3100,38 @@ function setStats(on){
   UI.statsOff = !on;
   try{ on ? localStorage.removeItem('pt_stats') : localStorage.setItem('pt_stats','off'); }catch{}
   renderAll(); toast(on ? 'Anonymous usage stats on. Thank you.' : 'Usage stats off. Nothing about this session will be sent.');
+}
+function setShareAuto(on){
+  UI.shareAuto = !!on;
+  try{ on ? localStorage.removeItem('pt_share') : localStorage.setItem('pt_share','off'); }catch{}
+  renderAll(); toast(on ? 'Your question and brief will be shared when the brief is ready.' : 'Sharing off. Your question and brief stay with you.');
+}
+function shareNotice(){
+  if (!(UI.analytics && HOSTED && S.mode==='live')) return null;
+  const off = UI.privSession || privateNow();
+  return h('div',{class:'statsline'},
+    h('span',{}, off ? 'Sharing with the builders: off while Private mode is or was on this session.'
+      : UI.shareAuto ? `When the brief is ready, your question and brief (not your documents) are shared with Soumya and Liz to improve the tool, with personal details removed. Deleted after ${UI.retention} days.`
+      : 'Your question and brief won’t be shared.'),
+    off ? null : h('button',{class:'linkbtn small',type:'button',onclick:()=>setShareAuto(!UI.shareAuto)}, UI.shareAuto ? 'Don’t share' : 'Share to help improve it'));
+}
+async function postShare(withT, note){
+  const res = await fetch(EVENT_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sid:UI.sid, share_id:UI.shareId||UI.sid, kind:'share', mode:S.runMode||'', share:sharePayload(withT, note), props:{include_transcript:!!withT, seats:inSeats().length, entry: UI.shared ? 'update' : 'auto'}})});
+  const j = await res.json().catch(()=>({}));
+  if (!j.stored) throw 0;
+}
+function autoShare(){
+  if (UI.shared || UI.shareBusy || !UI.shareAuto || !canShare()) return;
+  UI.shareBusy = true;
+  postShare(false,'').then(()=>{ UI.shared = true; UI.autoShared = true; renderSummary(); }).catch(()=>{}).finally(()=>{ UI.shareBusy = false; });
+}
+async function unshare(){
+  try{
+    const res = await fetch(EVENT_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sid:UI.sid, share_id:UI.shareId||UI.sid, kind:'unshare'})});
+    const j = await res.json().catch(()=>({}));
+    if (!j.removed) throw 0;
+    UI.shared = false; UI.autoShared = false; UI.unshared = true; renderSummary(); toast('Removed. We no longer have this session’s question or brief.');
+  }catch{ toast('Couldn’t remove it just now. Try again in a minute.'); }
 }
 function sharePayload(withTranscript, note){
   const r = t => UI.redact ? redactText(String(t||'')).text : String(t||'');
@@ -3122,7 +3164,7 @@ function openShare(){
   note.addEventListener('input', refresh);
   const dlg = h('dialog',{class:'sharedlg','aria-labelledby':'shareTitle'},
     h('div',{class:'sdbody'},
-      h('h2',{id:'shareTitle'},'Share this session to help improve the tool'),
+      h('h2',{id:'shareTitle'},UI.shared ? 'Add a note or the transcript' : 'Share this session to help improve the tool'),
       h('p',{class:'small muted'},`This sends the text below to Soumya and Liz so we can see what questions people bring and where the brief falls short. ${UI.redact?'Emails, phone numbers, ID numbers and addresses are removed first. ':''}It is deleted after ${UI.retention} days. Only share if the question isn’t confidential.`),
       pre,
       h('label',{class:'small',style:'display:flex;gap:8px;align-items:center'},h('input',{type:'checkbox',onchange:e=>{withT=e.target.checked;refresh();}}),'Include the full transcript'),
@@ -3132,12 +3174,10 @@ function openShare(){
       h('button',{class:'btn primary',type:'button',onclick:async ev=>{
         ev.target.disabled = true;
         try{
-          const res = await fetch(EVENT_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sid:UI.sid, kind:'share', mode:S.runMode||'', share:sharePayload(withT, note.value), props:{include_transcript:withT, seats:inSeats().length}})});
-          const j = await res.json().catch(()=>({}));
-          if (!j.stored) throw 0;
-          UI.shared = true; dlg.close(); renderSummary(); toast('Shared. Thank you, this really helps.');
+          await postShare(withT, note.value);
+          UI.shared = true; UI.unshared = false; dlg.close(); renderSummary(); toast('Shared. Thank you, this really helps.');
         }catch{ ev.target.disabled = false; toast('Couldn’t share just now. Try again in a minute.'); }
-      }},'Share')));
+      }},UI.shared ? 'Update what we have' : 'Share')));
   dlg.addEventListener('close', ()=>setTimeout(()=>dlg.remove(), 0));
   document.body.append(dlg); refresh(); dlg.showModal();
 }

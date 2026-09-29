@@ -4,8 +4,10 @@
 //   1. Anonymous events: what people did (mode, seat counts, steers, exports),
 //      never what they typed. The app sends none in Private mode, and none if
 //      the person switched usage stats off or their browser asks not to be tracked.
-//   2. Shared sessions: the question and brief, only when the person clicks
-//      "Share this session" and confirms the preview. Redacted in the browser first.
+//   2. Shared sessions: the question and brief of a live session, sent when the brief
+//      is ready unless the person switched sharing off (the setup screen and the Start
+//      button both say so). Personal details are removed in the browser first; documents
+//      are never sent; never in Private mode. "Remove it" deletes the row.
 //
 // Environment variables (Vercel > Settings > Environment Variables):
 //   SUPABASE_URL                 e.g. https://abcd1234.supabase.co
@@ -25,7 +27,7 @@ const RETENTION_DAYS = Math.max(1, Number(process.env.TABLETOP_RETENTION_DAYS) |
 const EVENTS = new Set([
   "app_open", "screen", "setup_page", "question_drafted", "debate_start", "seat_add", "seat_remove",
   "steer", "stress_test", "brief_ready", "detail_open", "export", "print", "reality_check",
-  "error", "clear", "share_open", "share_sent", "stats_off"
+  "error", "clear", "share_open", "share_sent", "share_removed", "stats_off"
 ]);
 const PROPS = new Set([
   "to", "page", "mode", "run", "tone", "style", "seats", "added", "removed", "has_context", "context_items",
@@ -113,9 +115,18 @@ export default async function handler(req, res) {
   if (!/^[a-z0-9-]{8,64}$/i.test(sid)) return res.status(400).json({ error: "sid" });
 
   try {
+    const shareId = /^[a-z0-9-]{8,64}$/i.test(String(body.share_id || "")) ? String(body.share_id) : sid;
+    if (body.kind === "unshare") {
+      const r = await fetch(`${URL_}/rest/v1/shares?sid=eq.${encodeURIComponent(shareId)}`, { method: "DELETE", headers: { apikey: KEY, authorization: `Bearer ${KEY}` } });
+      if (!r.ok) throw new Error("unshare " + r.status);
+      await insert("events", { sid, type: "share_removed", props: {} });
+      return res.status(200).json({ removed: true });
+    }
     if (body.kind === "share") {
       if (!allow(sid, 40)) return res.status(429).json({ error: "slow down" });
-      await insert("shares", { sid, mode: clip(body.mode, 20), brief: cleanShare(body.share) });
+      // One row per session: adding a note or the transcript replaces the earlier copy.
+      await fetch(`${URL_}/rest/v1/shares?sid=eq.${encodeURIComponent(shareId)}`, { method: "DELETE", headers: { apikey: KEY, authorization: `Bearer ${KEY}` } });
+      await insert("shares", { sid: shareId, mode: clip(body.mode, 20), brief: cleanShare(body.share) });
       await insert("events", { sid, type: "share_sent", props: cleanProps(body.props) });
     } else {
       const type = String(body.type || "");

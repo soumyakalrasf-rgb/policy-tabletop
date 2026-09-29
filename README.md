@@ -39,7 +39,7 @@ Seats built on one model tend to agree with themselves. When the OpenRouter acco
 
 ## Privacy
 
-- **Prompts are never stored.** The server does not log questions, background material or model replies. (Optional usage stats and opt-in shares are described below; both are off until you set them up.) Documents (PDF, Word, text) are converted to text inside the browser; the files are never uploaded.
+- **Background material is never stored,** and the model server does not log prompts or replies. If you set up usage stats (below), live sessions share their question and brief by default unless the person switches it off; Private mode never shares. Documents (PDF, Word, text) are converted to text inside the browser; the files are never uploaded.
 - **Personal details are removed before sending** (emails, phone numbers, ID, tax and account numbers, street addresses), and the setup screen shows exactly what will be sent. Names are not removed automatically; check the preview.
 - **Private mode** sends requests only to OpenRouter hosts with zero data retention that do not collect or train on prompts (`provider.zdr` and `data_collection: "deny"`). It turns on automatically when background material is added, never falls back to free models or Claude, and needs OpenRouter credit. Change its models with `OPENROUTER_PRIVATE_MODEL`.
 - **Clear everything** erases the session, background material and any saved key from the browser.
@@ -50,9 +50,9 @@ Seats built on one model tend to agree with themselves. When the OpenRouter acco
 Off until you add Supabase keys. Two kinds of record:
 
 - **Anonymous events**: what people did, never what they typed. For example: which mode they picked, how many seats, seats added or removed, steers, how long the brief took, exports clicked, errors, the "did this match the real meeting?" answer. The server keeps only a fixed list of event names and short values, so free text can't slip in. No names, emails or IP addresses are stored; each visit gets a random ID that resets when the tab closes or the person clears everything.
-- **Shared sessions**: after a live brief, people can click **Share this session**, see exactly what will be sent (question, bottom line, options, seats, where they landed, risks, open questions, an optional note and, if they tick it, the transcript), and confirm. Personal details are removed first. Background documents are never included.
+- **Shared sessions** (on by default, easy to switch off): when a live brief is ready, its question, bottom line, options, seats, where they landed, risks and open questions are sent, with personal details removed first. Background documents are never included. The setup screen and the table screen, right before Start, both say this and offer **Don't share** (remembered in that browser). After the brief, people can add a note or the transcript, or click **Remove it**, which deletes the row.
 
-Nothing is sent in Private mode (and for the rest of that session once Private mode has been on), when someone switches stats off on the setup screen, or when their browser sends Do Not Track or Global Privacy Control. Rows older than `TABLETOP_RETENTION_DAYS` (default 90) are deleted automatically.
+Nothing is sent in Private mode (and for the rest of that session once Private mode has been on), or in the scripted example. Browsers that send Do Not Track or Global Privacy Control start with both stats and sharing off. Stats and sharing are switched off separately. Rows older than `TABLETOP_RETENTION_DAYS` (default 90) are deleted automatically.
 
 Setup:
 
