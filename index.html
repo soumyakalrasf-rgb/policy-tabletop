@@ -547,6 +547,16 @@ button.ocard:hover{border-color:var(--ink-3)}
 .privhead .ic{width:18px;height:18px;color:var(--ink-2)}
 .privhead b{flex:1;font-size:.9rem}
 .privacy p{font-size:.84rem;color:var(--ink-2)}
+.statsline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--ink-3)}
+dialog.sharedlg{border:1px solid var(--line);border-radius:12px;padding:0;max-width:640px;width:calc(100% - 32px);background:var(--surface);color:var(--ink)}
+dialog.sharedlg::backdrop{background:rgba(0,0,0,.45)}
+.sharedlg .sdbody{padding:18px 18px 14px;display:grid;gap:10px}
+.sharedlg h2{font-size:1.1rem;margin:0}
+.sharedlg pre{white-space:pre-wrap;font:12px/1.45 var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:40vh;overflow:auto;margin:0}
+.sharedlg textarea{width:100%;box-sizing:border-box}
+.sharedlg .sdfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line)}
+.sharebox{margin-top:14px;padding:12px 14px;border:1px dashed var(--line-2);border-radius:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.86rem;color:var(--ink-2)}
+.sharebox p{flex:1;min-width:220px;margin:0}
 .privpill{border:1px solid var(--line-2);background:var(--bg);border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:600;color:var(--ink-2)}
 .privpill[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .sendprev{max-height:260px;overflow:auto;white-space:pre-wrap;font-family:var(--mono);font-size:.76rem;background:var(--surface-2);border-radius:8px;padding:10px 12px;margin:6px 0 0;color:var(--ink-2)}
@@ -588,7 +598,7 @@ button.ocard:hover{border-color:var(--ink-3)}
 .jumps button:hover{border-color:var(--ink);color:var(--ink)}
 .dsec{scroll-margin-top:60px}
 #analysisPanel,#matrixPanel,#expertPanel,#consultPanel,#recordPanel{scroll-margin-top:60px}
-@media print{
+@media print{.sharebox,dialog.sharedlg{display:none!important}
   .banner,.flowbar,.appbar,.seg,#stickyBar,footer.guard,.es-foot,.toast,.mtabs{display:none!important}
   body{padding:0}
   .screen{min-height:0}
@@ -1080,6 +1090,7 @@ function pushTurn(t){
   if (t.verify) S.verify = uniq([...S.verify, ...arr(t.verify)]);
 }
 function logSteer(kind, text, effect){
+  track('steer',{kind:String(kind||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,40)});
   S.steers.push({kind, text, effect, stage:STAGES.find(x=>x[0]===S.stage)?.[1], at:new Date().toLocaleString()});
 }
 
@@ -1494,6 +1505,7 @@ async function liveRun(from){
     if (e?.code==='stale' || S!==my) return;
     S.live.busy=null;
     S.live.error = {phase:S.live.phase==='gate'?'r3':S.live.phase, msg:errCopy(e)};
+    track('error',{code:String(e?.code||'unknown').slice(0,40), page:String(S.live.phase||'')});
     if (['not_granted','sampling_disabled','bad_key','bad_pass'].includes(e?.code)){ SAMPLE=null; UI.keyMode=false; UI.pass=''; }
     renderAll();
   }
@@ -1535,6 +1547,8 @@ function startTabletop(){
   S.started = true; S.reviewDate = addMonths(S.horizon);
   if (funOn() && S.funStyle==='surprise'){ const ks=Object.keys(FUN_STYLES).filter(k=>k!=='surprise'); S.funStyle = ks[Math.floor(Math.random()*ks.length)]; toast(`Surprise: ${funStyle().emoji} ${funStyle().label}!`); }
   S.mixed = S.mode==='live' && mixedOn(); if (S.mixed){ assignVoices(); S.voicePlan = {...UI.voices}; }
+  UI.t0 = Date.now(); UI.briefLogged = false;
+  track('debate_start',{run:S.runMode||'demo', tone:S.tone||'serious', style:funOn()?S.funStyle:undefined, seats:inSeats().length, has_context:!!S.context, context_items:S.contextItems.filter(x=>x.text.trim()).length, mixed:!!S.mixed, horizon:S.horizon, private_available:privateAvailable()});
   if (S.mode==='demo'){ S.queue = demoScript(); play(); }
   else { if (!SAMPLE){ toast(ERR.unavailable); return; } S.playing=true; renderAll(); liveRun('r1'); loop(); }
   go('debate');
@@ -1856,6 +1870,7 @@ function tableBlock(){
   const sug = (S.seatSuggestions||[]).filter(x=>!S.seats.some(s=>s.role.toLowerCase()===x.role.toLowerCase()));
   const addSeat = ({role, group, perspective, why}) => {
     if (S.seats.length>=12){ toast('The table holds up to 12 seats.'); return; }
+    track('seat_add',{src: why ? 'suggested' : 'own', seats:S.seats.length+1});
     S.seats.push({id:'s'+(S.seats.length+1)+'_'+(Date.now()%1000), role, group:group||'external', perspective:perspective||'', why:why||'Added by you.', sources:[], included:true, abbr: group==='redteam'?'RED':group==='absent'?'ABS':abbr(role)});
     S.seats.forEach((x,i)=>{ if (!/_/.test(x.id)) x.id='s'+(i+1); });
     renderSetupForce(); renderTable();
@@ -1940,7 +1955,7 @@ function editorGrid(){
         h('input',{type:'text',id:`sp${i}`,'aria-label':'Perspective',value:s.perspective,oninput:bind(s,'perspective')}),
         h('textarea',{id:`ss${i}`,rows:2,'aria-label':'Grounding sources, one per line',oninput:e=>{s.sources=e.target.value.split('\n').map(x=>x.trim()).filter(Boolean);}},s.sources.join('\n'))
       ),
-      h('button',{class:'x','aria-label':`Remove ${s.role}`,onclick:()=>{S.seats.splice(i,1);renderSetupForce();renderTable();}},'×')))),
+      h('button',{class:'x','aria-label':`Remove ${s.role}`,onclick:()=>{S.seats.splice(i,1);track('seat_remove',{seats:S.seats.length});renderSetupForce();renderTable();}},'×')))),
     S.seats.length<12 ? h('div',{},h('button',{class:'btn',onclick:()=>{const n=S.seats.length+1;S.seats.push({id:'s'+n+'_'+Date.now()%1000,role:'',group:'internal',perspective:'',sources:[],included:true,abbr:'?'});renderSetupForce();renderTable();}},'+ Add seat')) : null
   );
   return h('div',{class:'setup-grid'},left,right);
@@ -2263,6 +2278,7 @@ function renderSummary(){
   const lev = rows.filter(r=>r.lever);
   const hasLand = Object.keys(S.landing).length>0;
   const so = S.secondOpinion || (S.mode==='demo' ? DEMO_SECOND : null);
+  if (S.finished && !UI.briefLogged){ UI.briefLogged = true; track('brief_ready',{secs:UI.t0?Math.round((Date.now()-UI.t0)/1000):0, turns:S.turns.length, steers:S.steers.length, seats:inSeats().length, second_opinion:!!S.secondOpinion, warnings:warn.length}); }
   const more = (n, id) => n>0 ? h('button',{class:'morelink',onclick:()=>jumpDetail(id)},`+${n} more`) : null;
   const take = (ic, label, text, who, n, id, hot) => h('div',{class:'take'+(hot?' hot':'')},
     h('div',{class:'tkh'},icon(ic),h('span',{class:'label'},label)),
@@ -2296,11 +2312,14 @@ function renderSummary(){
     h('div',{class:'es-foot'},
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>go('detail')},'Everything else in Detail →'),
-        h('button',{class:'btn',onclick:()=>window.print()},'Print one page')),
+        h('button',{class:'btn',onclick:()=>{track('print');window.print();}},'Print one page')),
       h('div',{class:'btnrow'},
         h('button',{class:'btn',onclick:()=>exportTranscript()},'Download transcript'),
         h('button',{class:'btn',onclick:()=>exportMemo()},'Decision memo'),
         h('button',{class:'btn primary',onclick:()=>exportPublic(),title:'A plain-language explanation of the options, what was weighed and the sources, for people outside the room'},'Publish the reasoning'))),
+    canShare() ? h('div',{class:'sharebox'},icon('question'),
+      h('p',{}, UI.shared ? 'Thanks for sharing this session. It helps us see where the tool falls short.' : 'Was this useful? Sharing the question and brief with us (after you see exactly what’s sent) is the best way to help improve it.'),
+      UI.shared ? null : h('button',{class:'btn',type:'button',onclick:openShare},'Share this session')) : null,
     modelLine() ? h('p',{class:'small muted',style:'margin-top:14px'},modelLine()) : null
   ].filter(Boolean));
 }
@@ -2490,6 +2509,7 @@ function buildPublic(){
   return L.join('\n');
 }
 async function exportPublic(){
+  track('export',{what:'public'});
   const md = buildPublic();
   if (DL) return save(`public-reasoning-${new Date().toISOString().slice(0,10)}.md`, md);
   copyText(md);
@@ -2534,12 +2554,14 @@ function buildTranscript(){
   return L.join('\n');
 }
 async function exportTranscript(){
+  track('export',{what:'transcript'});
   if (!S.turns.length){ toast('The transcript is empty. Run a session first.'); return; }
   const md = buildTranscript();
   if (DL) return save(`tabletop-transcript-${new Date().toISOString().slice(0,10)}.md`, md);
   copyText(md);
 }
 async function exportMemo(){
+  track('export',{what:'memo'});
   const md = buildMemo();
   if (DL) return save(`decision-memo-${new Date().toISOString().slice(0,10)}.md`, md);
   copyText(md);
@@ -2587,6 +2609,7 @@ function rebuildContext(){
   for (const x of S.contextItems){ const r = UI.redact ? redactText(x.text) : {text:x.text, counts:{}}; x.sent = r.text; x.removed = r.counts; }
   S.context = S.contextItems.filter(x=>x.text.trim()).map(x=>`[${AUTH[x.type].label.toUpperCase()}: ${x.name||'Untitled'}]\n${x.sent.trim()}`).join('\n\n');
   if (S.context && !UI.privateTouched && privateAvailable()) UI.privateMode = true;
+  if (UI.privateMode && privateAvailable()) UI.privSession = true;
   syncPrivacyUI();
 }
 function syncPrivacyUI(){
@@ -2598,14 +2621,17 @@ function syncPrivacyUI(){
   if (rn){ const tot={}; for (const x of S.contextItems) for (const [k,n] of Object.entries(x.removed||{})) tot[k]=(tot[k]||0)+n; rn.textContent = UI.redact ? (Object.keys(tot).length ? `Removed so far: ${countWords(tot)}.` : 'Nothing found to remove so far.') : 'Personal details will be sent as written.'; }
   document.querySelectorAll('.privpill').forEach(b=>{ b.setAttribute('aria-pressed', String(!!UI.privateMode)); b.querySelector('.pv').textContent = UI.privateMode ? 'On' : 'Off'; });
 }
-function togglePrivate(){ UI.privateMode = !UI.privateMode; UI.privateTouched = true; syncPrivacyUI(); toast(UI.privateMode ? 'Private mode on: only AI hosts that keep nothing.' : 'Private mode off.'); }
+function togglePrivate(){ UI.privateMode = !UI.privateMode; UI.privateTouched = true; if (UI.privateMode) UI.privSession = true; syncPrivacyUI(); toast(UI.privateMode ? 'Private mode on: only AI hosts that keep nothing.' : 'Private mode off.'); }
 function privacyStrip(){
   const avail = privateAvailable();
   return h('div',{class:'privacy'},
     h('div',{class:'privhead'},icon('against'),h('b',{},'Your material stays yours'),
       avail ? h('button',{class:'privpill',type:'button','aria-pressed':String(!!UI.privateMode),onclick:togglePrivate,title:'Only use AI hosts with zero data retention that never train on prompts'},'Private mode: ',h('span',{class:'pv'},UI.privateMode?'On':'Off')) : null),
-    h('p',{},'Files are read in this browser. Nothing is saved on this site’s server. Only the text shown under “What will be sent” goes to the AI model, and closing the tab erases the session.',
+    h('p',{},'Files are read in this browser. ', UI.analytics && HOSTED ? 'Your question and material are never saved on this site’s server. ' : 'Nothing is saved on this site’s server. ','Only the text shown under “What will be sent” goes to the AI model, and closing the tab erases the session.',
       avail ? ' Private mode sends it only to hosts that keep no data; it turns on by itself when you add background.' : ((!(window.claude && window.claude.use)) ? '' : ' Here it runs on your own Claude account, under your Claude privacy settings.')),
+    UI.analytics && HOSTED ? h('div',{class:'statsline'},
+      h('span',{}, UI.privSession || privateNow() ? 'Usage stats: off while Private mode is or was on this session.' : UI.statsOff ? 'Anonymous usage stats: off.' : `Anonymous usage stats: on. We count clicks, like which mode you picked, never what you type. Deleted after ${UI.retention} days.`),
+      UI.privSession || privateNow() ? null : h('button',{class:'linkbtn small',type:'button',onclick:()=>setStats(UI.statsOff)}, UI.statsOff ? 'Turn on' : 'Turn off')) : null,
     h('div',{class:'btnrow'},h('button',{class:'linkbtn small',type:'button',onclick:clearEverything},'Clear everything')));
 }
 function clearEverything(){
@@ -2615,7 +2641,7 @@ function clearEverything(){
   if (UI.keyMode){ UI.apiKey=''; UI.keyMode=false; SAMPLE=null; }
   try{ sessionStorage.removeItem('pt_key'); sessionStorage.removeItem('pt_prov'); }catch{}
   document.querySelectorAll('input[type=file]').forEach(x=>x.value='');
-  S = freshState(mode); UI.setupPage=0; UI.briefPage=0; UI.privateTouched=false; UI.privateMode=false; UI.open={};
+  track('clear'); S = freshState(mode); UI.setupPage=0; UI.briefPage=0; UI.privateTouched=false; UI.privateMode=false; UI.open={}; UI.sid=newSid(); UI.privSession=false; UI.shared=false;
   renderAll(); go('setup'); toast('Cleared. Nothing from that session remains in this browser.');
 }
 function addContextItem(item){ S.contextItems.push({type:'empirical', name:'', text:'', ...item}); rebuildContext(); }
@@ -2810,7 +2836,7 @@ function prepareData(){
   if (!missing.length) missing = inSeats().filter(s=>s.group==='absent').map(s=>`${s.role.replace(/\s*\(absent voice\)/i,'')}: only simulated here, so hear from them directly.`);
   return { objections, caseAgainst, unanswered, missing };
 }
-function setReality(ans){ S.reality.answer = ans; renderBriefDetail(); renderRecord(); }
+function setReality(ans){ track('reality_check',{answer:ans}); S.reality.answer = ans; renderBriefDetail(); renderRecord(); }
 
 /* ---------- icons and the intro view ---------- */
 const ICONS = {
@@ -2954,6 +2980,7 @@ function animateIn(el, dir){ if (!el) return; el.classList.remove('enter'); el.s
 function go(k){
   const order = SCREENS.map(x=>x[0]);
   const prev = UI.screen; UI.screen = k;
+  if (prev!==k){ track('screen',{to:k}); if (k==='detail') track('detail_open'); }
   if (prev!==k) document.querySelectorAll('.toast').forEach(t=>t.remove());
   if (k==='welcome') { renderIntro(); setIntroPage(UI.introPage||0, 0, true); } else markIntroSeen();
   for (const [s] of SCREENS) $('#scr-'+s).hidden = s!==k;
@@ -3041,6 +3068,79 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const CAN_MIC = HOSTED && !!SR && window.isSecureContext;
 const BATCH = () => HOSTED ? (UI.parallel||1) : 3; // one request at a time on hosted copies, which often use rate-limited free models
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
+/* ---------- usage stats (anonymous) and opt-in sharing ----------
+   Events carry counts and choices only, never text. Nothing is sent in Private mode,
+   when the person switches stats off, or when the browser asks not to be tracked.
+   Question and brief text leave only through "Share this session", after a preview. */
+const EVENT_API = window.TABLETOP_API ? String(window.TABLETOP_API).replace(/claude\/?$/,'event') : '';
+function newSid(){ try{ return crypto.randomUUID(); }catch{ return 'x'+Math.random().toString(36).slice(2)+Date.now().toString(36); } }
+UI.sid = newSid(); UI.analytics = false; UI.retention = 90; UI.privSession = false; UI.shared = false; UI.t0 = 0;
+UI.statsOff = navigator.doNotTrack==='1' || navigator.globalPrivacyControl===true;
+try{ if (localStorage.getItem('pt_stats')==='off') UI.statsOff = true; }catch{}
+function privateNow(){ return !!(UI.privateMode && privateAvailable()); }
+function canTrack(){ try{ return HOSTED && !!EVENT_API && UI.analytics && !UI.statsOff && !UI.privSession && !privateNow(); }catch{ return false; } }
+function canShare(){ try{ return HOSTED && !!EVENT_API && UI.analytics && !UI.privSession && !privateNow() && S.mode==='live'; }catch{ return false; } }
+function track(type, props={}){
+  if (!canTrack()) return;
+  const body = JSON.stringify({sid:UI.sid, type, props:{mode:S.mode, device: innerWidth<700?'phone':'desktop', ...props}});
+  try{ fetch(EVENT_API,{method:'POST',keepalive:true,headers:{'content-type':'application/json'},body}).catch(()=>{}); }catch{}
+}
+function setStats(on){
+  if (!on) track('stats_off');
+  UI.statsOff = !on;
+  try{ on ? localStorage.removeItem('pt_stats') : localStorage.setItem('pt_stats','off'); }catch{}
+  renderAll(); toast(on ? 'Anonymous usage stats on. Thank you.' : 'Usage stats off. Nothing about this session will be sent.');
+}
+function sharePayload(withTranscript, note){
+  const r = t => UI.redact ? redactText(String(t||'')).text : String(t||'');
+  const d = summaryData() || {};
+  const b = bottomLine() || {};
+  return {
+    question: r(S.question), headline: r(d.headline), bottom: {do:r(b.do), watch:r(b.watch), call:r(b.call)},
+    options: S.options.map(o=>r(o.label)), seats: inSeats().map(s=>r(s.role)),
+    landing: S.options.map(o=>{ const c=tally(o.id); return `${r(o.label)}: ${c.support} support, ${c.conditional} conditional, ${c.oppose} oppose`; }),
+    risks: S.risks.map(x=>r(x.short||x.label||'')), actions: (S.matrix.ku||[]).map(x=>r(x.text||x)),
+    note: r(note), transcript: withTranscript ? r(buildTranscript()) : null
+  };
+}
+function sharePreview(pl){
+  const L = [`Question: ${pl.question}`, pl.headline?`Headline: ${pl.headline}`:'', 'Bottom line:', ...[['Next step',pl.bottom.do],['Watch',pl.bottom.watch],['Talk to',pl.bottom.call]].filter(x=>x[1]).map(([l,v])=>`  ${l}: ${v}`),
+    `Options: ${pl.options.join('; ')}`, `Seats: ${pl.seats.join('; ')}`, 'Where the seats landed:', ...pl.landing.map(x=>'  '+x),
+    `Risks: ${pl.risks.join('; ')}`, pl.actions.length?`Open questions: ${pl.actions.join('; ')}`:'', pl.note?`Your note: ${pl.note}`:'',
+    pl.transcript ? `\nFull transcript (${pl.transcript.length.toLocaleString()} characters) is included.` : '\nThe transcript is not included.',
+    '\nNot included: your background documents, your name, your email, your IP address.'];
+  return L.filter(x=>x!=='').join('\n');
+}
+function openShare(){
+  if (!canShare()){ toast('Sharing is off for this session.'); return; }
+  track('share_open');
+  document.querySelector('dialog.sharedlg')?.remove();
+  let withT = false;
+  const pre = h('pre',{});
+  const note = h('textarea',{rows:2,placeholder:'Optional: what was useful, what was missing, how you plan to use it',maxlength:1000});
+  const refresh = ()=>{ pre.textContent = sharePreview(sharePayload(withT, note.value)); };
+  note.addEventListener('input', refresh);
+  const dlg = h('dialog',{class:'sharedlg','aria-labelledby':'shareTitle'},
+    h('div',{class:'sdbody'},
+      h('h2',{id:'shareTitle'},'Share this session to help improve the tool'),
+      h('p',{class:'small muted'},`This sends the text below to Soumya and Liz so we can see what questions people bring and where the brief falls short. ${UI.redact?'Emails, phone numbers, ID numbers and addresses are removed first. ':''}It is deleted after ${UI.retention} days. Only share if the question isn’t confidential.`),
+      pre,
+      h('label',{class:'small',style:'display:flex;gap:8px;align-items:center'},h('input',{type:'checkbox',onchange:e=>{withT=e.target.checked;refresh();}}),'Include the full transcript'),
+      note),
+    h('div',{class:'sdfoot'},
+      h('button',{class:'btn',type:'button',onclick:()=>dlg.close()},'Cancel'),
+      h('button',{class:'btn primary',type:'button',onclick:async ev=>{
+        ev.target.disabled = true;
+        try{
+          const res = await fetch(EVENT_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sid:UI.sid, kind:'share', mode:S.runMode||'', share:sharePayload(withT, note.value), props:{include_transcript:withT, seats:inSeats().length}})});
+          const j = await res.json().catch(()=>({}));
+          if (!j.stored) throw 0;
+          UI.shared = true; dlg.close(); renderSummary(); toast('Shared. Thank you, this really helps.');
+        }catch{ ev.target.disabled = false; toast('Couldn’t share just now. Try again in a minute.'); }
+      }},'Share')));
+  dlg.addEventListener('close', ()=>setTimeout(()=>dlg.remove(), 0));
+  document.body.append(dlg); refresh(); dlg.showModal();
+}
 async function apiJson(input, opts={}){
   for (let attempt=0; attempt<2; attempt++){
     let res;
@@ -3137,6 +3237,8 @@ function toggleMic(btn){
         if (j.ok){ UI.privateAvail=!!j.private; UI.voices=(j.voices&&typeof j.voices==='object')?j.voices:null; UI.server=true; UI.economy=!!j.economy; UI.modelLabel=j.model||''; UI.parallel=Number(j.parallel)||1; UI.needPass=!!j.passcode; if (!UI.needPass) SAMPLE = {json: apiJson}; }
       }catch{}
     }
+    if (EVENT_API){ try{ const er = await fetch(EVENT_API); const ej = er.ok ? await er.json().catch(()=>({})) : {}; UI.analytics = !!ej.on; UI.retention = Number(ej.retention_days)||90; }catch{} }
+    track('app_open',{entry: UI.screen});
     if (!SAMPLE && !UI.server){ let k=''; try{ k = sessionStorage.getItem('pt_key')||''; }catch{} if (k){ UI.apiKey=k; UI.keyMode=true; try{ UI.keyProvider=sessionStorage.getItem('pt_prov')||'anthropic'; }catch{} SAMPLE={json:directJson}; } }
     renderAll(); return;
   }

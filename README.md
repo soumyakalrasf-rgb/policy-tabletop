@@ -39,11 +39,50 @@ Seats built on one model tend to agree with themselves. When the OpenRouter acco
 
 ## Privacy
 
-- **Nothing is stored on the server.** It has no database and does not log prompts. Documents (PDF, Word, text) are converted to text inside the browser; the files are never uploaded.
+- **Prompts are never stored.** The server does not log questions, background material or model replies. (Optional usage stats and opt-in shares are described below; both are off until you set them up.) Documents (PDF, Word, text) are converted to text inside the browser; the files are never uploaded.
 - **Personal details are removed before sending** (emails, phone numbers, ID, tax and account numbers, street addresses), and the setup screen shows exactly what will be sent. Names are not removed automatically; check the preview.
 - **Private mode** sends requests only to OpenRouter hosts with zero data retention that do not collect or train on prompts (`provider.zdr` and `data_collection: "deny"`). It turns on automatically when background material is added, never falls back to free models or Claude, and needs OpenRouter credit. Change its models with `OPENROUTER_PRIVATE_MODEL`.
 - **Clear everything** erases the session, background material and any saved key from the browser.
 - For stricter requirements, host the tool yourself and point it at a model service your organization already approves.
+
+## Usage stats and shared sessions (optional)
+
+Off until you add Supabase keys. Two kinds of record:
+
+- **Anonymous events**: what people did, never what they typed. For example: which mode they picked, how many seats, seats added or removed, steers, how long the brief took, exports clicked, errors, the "did this match the real meeting?" answer. The server keeps only a fixed list of event names and short values, so free text can't slip in. No names, emails or IP addresses are stored; each visit gets a random ID that resets when the tab closes or the person clears everything.
+- **Shared sessions**: after a live brief, people can click **Share this session**, see exactly what will be sent (question, bottom line, options, seats, where they landed, risks, open questions, an optional note and, if they tick it, the transcript), and confirm. Personal details are removed first. Background documents are never included.
+
+Nothing is sent in Private mode (and for the rest of that session once Private mode has been on), when someone switches stats off on the setup screen, or when their browser sends Do Not Track or Global Privacy Control. Rows older than `TABLETOP_RETENTION_DAYS` (default 90) are deleted automatically.
+
+Setup:
+
+1. Create a free project at supabase.com. In **SQL Editor**, run:
+
+```sql
+create table events (id bigint generated always as identity primary key, created_at timestamptz not null default now(), sid text not null, type text not null, props jsonb not null default '{}');
+create table shares (id bigint generated always as identity primary key, created_at timestamptz not null default now(), sid text not null, mode text, brief jsonb not null);
+alter table events enable row level security;
+alter table shares enable row level security;
+create index on events (created_at); create index on events (type); create index on shares (created_at);
+```
+
+Row level security with no policies means only the server key can read or write.
+
+2. In Vercel, **Settings > Environment Variables**, add `SUPABASE_URL` (Project Settings > API > Project URL) and `SUPABASE_SERVICE_ROLE_KEY` (the `service_role` secret). Never put that key in the page or in chat. Redeploy.
+3. Check `/api/event` returns `{"on":true}`. Set `TABLETOP_ANALYTICS=off` to stop all logging without removing the keys.
+
+Useful queries:
+
+```sql
+-- funnel: visits, debates started, briefs finished, exports
+select type, count(distinct sid) from events where type in ('app_open','debate_start','brief_ready','export','share_sent') group by type;
+-- which exports people use
+select props->>'what' as what, count(*) from events where type='export' group by 1;
+-- where people get stuck
+select props->>'code' as code, count(*) from events where type='error' group by 1 order by 2 desc;
+-- recent shared questions and notes
+select created_at, brief->>'question' as question, brief->>'note' as note from shares order by created_at desc limit 20;
+```
 
 ## Before staff use it with real matters
 
@@ -55,4 +94,5 @@ Seats built on one model tend to agree with themselves. When the OpenRouter acco
 
 - `index.html`: the whole app
 - `api/claude.js`: server function that calls OpenRouter or Anthropic, with passcode and economy mode
+- `api/event.js`: optional usage stats and opt-in shared sessions (Supabase)
 - `package.json`: marks the function as an ES module, Node 18+
