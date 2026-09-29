@@ -20,6 +20,8 @@
 const URL_ = String(process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const ON = !!(URL_ && KEY) && String(process.env.TABLETOP_ANALYTICS || "").toLowerCase() !== "off";
+// New-style secret keys (sb_secret_...) go only in the apikey header; legacy service_role JWTs also as a bearer token.
+const AUTH = KEY.startsWith("eyJ") ? { apikey: KEY, authorization: `Bearer ${KEY}` } : { apikey: KEY };
 const RETENTION_DAYS = Math.max(1, Number(process.env.TABLETOP_RETENTION_DAYS) || 90);
 
 // Only these event names and property names are stored. Anything else is dropped,
@@ -70,7 +72,7 @@ function cleanShare(b) {
 async function insert(table, row) {
   const r = await fetch(`${URL_}/rest/v1/${table}`, {
     method: "POST",
-    headers: { apikey: KEY, authorization: `Bearer ${KEY}`, "content-type": "application/json", prefer: "return=minimal" },
+    headers: { ...AUTH, "content-type": "application/json", prefer: "return=minimal" },
     body: JSON.stringify(row)
   });
   if (!r.ok) throw new Error(`${table} ${r.status}`);
@@ -79,7 +81,7 @@ async function prune() {
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 864e5).toISOString();
   for (const t of ["events", "shares"]) {
     await fetch(`${URL_}/rest/v1/${t}?created_at=lt.${encodeURIComponent(cutoff)}`, {
-      method: "DELETE", headers: { apikey: KEY, authorization: `Bearer ${KEY}` }
+      method: "DELETE", headers: AUTH
     }).catch(() => {});
   }
 }
@@ -117,7 +119,7 @@ export default async function handler(req, res) {
   try {
     const shareId = /^[a-z0-9-]{8,64}$/i.test(String(body.share_id || "")) ? String(body.share_id) : sid;
     if (body.kind === "unshare") {
-      const r = await fetch(`${URL_}/rest/v1/shares?sid=eq.${encodeURIComponent(shareId)}`, { method: "DELETE", headers: { apikey: KEY, authorization: `Bearer ${KEY}` } });
+      const r = await fetch(`${URL_}/rest/v1/shares?sid=eq.${encodeURIComponent(shareId)}`, { method: "DELETE", headers: AUTH });
       if (!r.ok) throw new Error("unshare " + r.status);
       await insert("events", { sid, type: "share_removed", props: {} });
       return res.status(200).json({ removed: true });
@@ -125,7 +127,7 @@ export default async function handler(req, res) {
     if (body.kind === "share") {
       if (!allow(sid, 40)) return res.status(429).json({ error: "slow down" });
       // One row per session: adding a note or the transcript replaces the earlier copy.
-      await fetch(`${URL_}/rest/v1/shares?sid=eq.${encodeURIComponent(shareId)}`, { method: "DELETE", headers: { apikey: KEY, authorization: `Bearer ${KEY}` } });
+      await fetch(`${URL_}/rest/v1/shares?sid=eq.${encodeURIComponent(shareId)}`, { method: "DELETE", headers: AUTH });
       await insert("shares", { sid: shareId, mode: clip(body.mode, 20), brief: cleanShare(body.share) });
       await insert("events", { sid, type: "share_sent", props: cleanProps(body.props) });
     } else {
